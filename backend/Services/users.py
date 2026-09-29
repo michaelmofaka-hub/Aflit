@@ -1,5 +1,7 @@
 import bcrypt
 import jwt
+from bson import ObjectId
+from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 from database.database import database
 from Config.settings import settings
@@ -22,16 +24,20 @@ def create_access_token(user_id: str) -> str:
     "user_id": user_id,
     "exp": expires_at
   }
-  token = jwt.encode(payload, settings.jwt_secret,          algorithm="HS256")
+  token = jwt.encode(payload, settings.jwt_secret,             algorithm="HS256")
   return token
   
 def verify_access_token(token: str):
-    payload = jwt.decode(
-        token,
-        settings.jwt_secret,
-        algorithms=["HS256"]
-    )
-    return payload
+    
+    try:
+       payload = jwt.decode(
+         token,
+         settings.jwt_secret,
+         algorithms=["HS256"]
+       )
+       return payload
+    except jwt.PyJWTError:
+      return None
 
 def create_user(username: str, email: str, password: str) -> dict:
   hashed_password = hash_password(password)
@@ -50,14 +56,31 @@ async def save_user(user: dict):
 async def get_user_by_email(email: str):
   collection = database["users"]
   user = await collection.find_one({"email": email})
-  if user is None:
-    return None
+  if user is not None:
+    raise HTTPException(
+      status_code=409,
+      detail="email registered"
+    )
   return user
 
+async def get_user_by_id(user_id: str):
+    collection = database["users"]
+    user = await collection.find_one({"_id": ObjectId(user_id)})
+
+    if user is None:
+        return None
+    return user
+
+def ensure_ownership(resource_user_id: str, current_user_id: str):
+    if resource_user_id != current_user_id:
+        return False
+
+    return True
+  
 async def authenticate_user(email: str, password: str):
   user = await get_user_by_email(email)
   if user is None:
-    return None
+    raise None
   is_valid = verify_password(password, user["password"])
   if not is_valid:
     return None
