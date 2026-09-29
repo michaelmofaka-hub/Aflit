@@ -1,6 +1,9 @@
 import bcrypt
+<<<<<<< HEAD
 import jwt
 from datetime import datetime, timedelta, timezone
+=======
+>>>>>>> 45d31a2d1106c8c3f4f2e75739398e9c1b2ada98
 from database.database import database
 from Config.settings import settings
 
@@ -15,6 +18,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
   stored = stored_hash.encode('utf-8')
   return bcrypt.checkpw(password_bytes, stored)
 
+<<<<<<< HEAD
 def create_access_token(user_id: str) -> str:
   """it simply returns a token of type string"""
   expires_at = datetime.now(timezone.utc) +                 timedelta(minutes=15)
@@ -34,6 +38,9 @@ def verify_access_token(token: str):
     return payload
 
 def create_user(username: str, email: str, password: str) -> dict:
+=======
+def create_user(username: str, email: str, password: str):
+>>>>>>> 45d31a2d1106c8c3f4f2e75739398e9c1b2ada98
   hashed_password = hash_password(password)
   user = {
     "username": username,
@@ -43,7 +50,11 @@ def create_user(username: str, email: str, password: str) -> dict:
   return user
 
 async def save_user(user: dict):
+<<<<<<< HEAD
   collection = database["users"]
+=======
+  collection = database['user']
+>>>>>>> 45d31a2d1106c8c3f4f2e75739398e9c1b2ada98
   result = await collection.insert_one(user)
   return str(result.inserted_id)
 
@@ -52,8 +63,12 @@ async def get_user_by_email(email: str):
   user = await collection.find_one({"email": email})
   if user is None:
     return None
+<<<<<<< HEAD
   return user
 
+=======
+    
+>>>>>>> 45d31a2d1106c8c3f4f2e75739398e9c1b2ada98
 async def authenticate_user(email: str, password: str):
   user = await get_user_by_email(email)
   if user is None:
@@ -64,5 +79,17 @@ async def authenticate_user(email: str, password: str):
   return user
 
 if __name__=="__main__":
+<<<<<<< HEAD
   token = create_access_token('supertoken')
   print(token)
+=======
+  import asyncio
+  authenticated = asyncio.run(
+    authenticate_user(
+        "john@example.com",
+        "mysecretpassword"
+        )
+    )
+    
+  print(f"Authenticated user: {authenticated}")
+>>>>>>> 45d31a2d1106c8c3f4f2e75739398e9c1b2ada98
