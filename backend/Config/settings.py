@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     mongodb_url: str
     environment: str = "development"
+    jwt_issuer: str = "aflit"
     jwt_secret: str
 
     model_config = SettingsConfigDict(
