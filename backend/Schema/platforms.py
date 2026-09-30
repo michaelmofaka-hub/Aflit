@@ -1,8 +1,13 @@
-from pydantic import  BaseModel
-
-class platform_credentials(BaseModel):
-  user_id: str
-  platform_name: str
-  platform_id: str
+from pydantic import BaseModel
 
 
+class PlatformCredentials(BaseModel):
+    platform_name: str
+    platform_id: str
+
+
+class PlatformResponse(BaseModel):
+    platform_id: str
+    platform_name: str
+    status: str
+  
