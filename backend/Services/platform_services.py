@@ -13,6 +13,7 @@ async def connect_platform(
   }
   collection = database["platformconnected"]
 
-  result = collection.insert_one(create_platform)
+  result = await collection.insert_one(create_platform)
 
   return str(result.inserted_id)
+  
