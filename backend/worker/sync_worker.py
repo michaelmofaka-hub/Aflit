@@ -1,42 +1,62 @@
 import asyncio
 
-from database.database import database
 from Services.sync_job_services import (
-get_pending_sync_job,
-start_sync_job,
-complete_sync_job
+    get_pending_sync_job,
+    start_sync_job,
+    complete_sync_job,
+    fail_sync_job
 )
 
+
 async def sync_worker():
-  while True:
-    job = await get_pending_sync_job()
+    print("SYNC WORKER STARTED")
 
-    if job is None:
-    await asyncio.sleep(5)
-    continue
+    while True:
+        try:
+            job = await get_pending_sync_job()
 
-    sync_job_id = str(job["_id"])
-    user_id = job["user_id"]
+            if job is None:
+                await asyncio.sleep(5)
+                continue
 
-    started_job = await start_sync_job(
-    sync_job_id=sync_job_id,
-    user_id=user_id
-    )
+            sync_job_id = str(job["_id"])
+            user_id = job["user_id"]
 
-    if started_job is None:
-    continue
+            print(f"SYNC WORKER: Found job {sync_job_id}")
 
-    try:
-        # actual sync work will go here
-        await asyncio.sleep(2)
-    
-        await complete_sync_job(
-            sync_job_id=sync_job_id,
-            user_id=user_id
-        )
-    except Exception as error:
-        await fail_sync_job(
-            sync_job_id=sync_job_id,
-            user_id=user_id,
-            error=str(error)
-        )
+            started_job = await start_sync_job(
+                sync_job_id=sync_job_id,
+                user_id=user_id
+            )
+
+            if started_job is None:
+                print("SYNC WORKER: Could not claim job")
+                continue
+
+            print(f"SYNC WORKER: Job {sync_job_id} is running")
+
+            try:
+                # Temporary simulation of synchronization work
+                await asyncio.sleep(2)
+
+                raise Exception("Test Synchronization Failure")
+
+                await complete_sync_job(
+                    sync_job_id=sync_job_id,
+                    user_id=user_id
+                )
+
+                print(f"SYNC WORKER: Job {sync_job_id} completed")
+
+            except Exception as error:
+                print(f"SYNC WORKER: Job {sync_job_id} failed: {error}")
+
+                await fail_sync_job(
+                    sync_job_id=sync_job_id,
+                    user_id=user_id,
+                    error=str(error)
+                )
+
+        except Exception as error:
+            print(f"SYNC WORKER ERROR: {error}")
+            await asyncio.sleep(5)

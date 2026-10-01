@@ -25,9 +25,13 @@ async def connect(
     user_id = str(current_user["_id"])
 
     platform_id = await connect_platform(
-        user_id=user_id,
-        platform=credentials.platform_name,
-        platform_id=credentials.platform_id
+    user_id=current_user["user_id"],
+    platform=data.platform_name,
+    platform_id=data.platform_id,
+    external_account_id=data.external_account_id,
+    access_token=data.access_token,
+    refresh_token=data.refresh_token,
+    token_expires_at=data.token_expires_at
     )
 
     if platform_id is None:

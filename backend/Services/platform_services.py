@@ -8,14 +8,22 @@ from database.database import database
 async def connect_platform(
     user_id: str,
     platform: str,
-    platform_id: str
+    platform_id: str,
+    external_account_id: str | None = None,
+    access_token: str | None = None,
+    refresh_token: str | None = None,
+    token_expires_at=None
 ):
     platform_data = {
-        "user_id": user_id,
-        "platform": platform,
-        "platform_id": platform_id,
-        "status": "connected"
-    }
+    "user_id": user_id,
+    "platform": platform,
+    "platform_id": platform_id,
+    "external_account_id": external_account_id,
+    "access_token": access_token,
+    "refresh_token": refresh_token,
+    "token_expires_at": token_expires_at,
+    "status": "connected"
+}
 
     collection = database["platform"]
 

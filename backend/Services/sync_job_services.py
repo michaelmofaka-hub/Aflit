@@ -5,6 +5,7 @@ from bson.errors import InvalidId
 
 from database.database import database
 
+
 async def get_user_platform(
     platform_id: str,
     user_id: str
@@ -22,6 +23,7 @@ async def get_user_platform(
     })
 
     return platform
+
 
 async def create_sync_job(
     user_id: str,
@@ -53,6 +55,17 @@ async def create_sync_job(
     result = await collection.insert_one(sync_job)
 
     return str(result.inserted_id)
+
+
+async def get_pending_sync_job():
+    collection = database["sync_jobs"]
+
+    job = await collection.find_one({
+        "status": "pending"
+    })
+
+    return job
+
 
 async def start_sync_job(
     sync_job_id: str,
@@ -87,6 +100,7 @@ async def start_sync_job(
         user_id=user_id
     )
 
+
 async def complete_sync_job(
     sync_job_id: str,
     user_id: str
@@ -119,6 +133,7 @@ async def complete_sync_job(
         sync_job_id=sync_job_id,
         user_id=user_id
     )
+
 
 async def fail_sync_job(
     sync_job_id: str,
@@ -153,6 +168,7 @@ async def fail_sync_job(
         sync_job_id=sync_job_id,
         user_id=user_id
     )
+
 
 async def retry_sync_job(
     sync_job_id: str,
@@ -194,8 +210,11 @@ async def retry_sync_job(
         sync_job_id=sync_job_id,
         user_id=user_id
     )
-  
-async def get_user_sync_jobs(user_id: str):
+
+
+async def get_user_sync_jobs(
+    user_id: str
+):
     collection = database["sync_jobs"]
 
     cursor = collection.find({
