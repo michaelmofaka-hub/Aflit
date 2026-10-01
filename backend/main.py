@@ -7,6 +7,7 @@ from Routes.platform_route import router as platform_router
 from Routes.content_route import router as content_router
 from Routes.analytic_route import router as analytic_router
 
+from Workers.sync_worker import sync_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,9 +18,11 @@ async def lifespan(app: FastAPI):
       "email",
       unique=True
     )
+      worker = asyncio.create_task(sync_worker())
     yield
     # shutdown
     await client.close()
+    worker_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(users_router, prefix="/users")
