@@ -32,7 +32,12 @@ async def create(
         title=content.title,
         description=content.description,
         published_at=content.published_at
-    )
+      )
+    if content_id is None:
+      raise HTTPException(
+          status_code=404,
+          detail="Platform connection not found"
+      )
 
     created_content = await get_content(
         content_id=content_id,

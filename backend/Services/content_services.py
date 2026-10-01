@@ -6,6 +6,25 @@ from bson.errors import InvalidId
 from database.database import database
 
 
+async def get_user_platform(
+    platform_id: str,
+    user_id: str
+):
+    collection = database["platform"]
+
+    try:
+        object_id = ObjectId(platform_id)
+    except InvalidId:
+        return None
+
+    platform = await collection.find_one({
+        "_id": object_id,
+        "user_id": user_id
+    })
+
+    return platform
+
+
 async def create_content(
     user_id: str,
     platform_id: str,
@@ -15,10 +34,18 @@ async def create_content(
     description: str | None,
     published_at
 ):
+    platform_data = await get_user_platform(
+        platform_id=platform_id,
+        user_id=user_id
+    )
+
+    if platform_data is None:
+        return None
+
     content = {
         "user_id": user_id,
         "platform_id": platform_id,
-        "platform": platform,
+        "platform": platform_data["platform"],
         "external_content_id": external_content_id,
         "title": title,
         "description": description,

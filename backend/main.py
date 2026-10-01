@@ -5,6 +5,7 @@ from database.database import client, database
 from Routes.users import router as users_router
 from Routes.platform_route import router as platform_router
 from Routes.content_route import router as content_router
+from Routes.analytic_route import router as analytic_router
 
 
 @asynccontextmanager
@@ -24,6 +25,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(users_router, prefix="/users")
 app.include_router(platform_router, prefix="/platform")
 app.include_router(content_router, prefix="/content")
+app.include_router(analytic_router, prefix="/content")
 
 
 @app.get("/")
