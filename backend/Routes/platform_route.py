@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import RedirectResponse
 
+from OAuth.google import create_google_flow
 from Schema.platforms import PlatformCredentials, PlatformResponse
 
 from Services.platform_services import (
@@ -109,4 +111,28 @@ async def disconnect_platform(
 
     return {
         "message": "Platform disconnected"
+    }
+
+@router.get("/youtube/connect")
+async def connect_youtube():
+    flow = create_google_flow()
+
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true"
+    )
+
+    return RedirectResponse(authorization_url)
+
+@router.get("/youtube/callback")
+async def youtube_callback(
+    code: str = Query(...),
+    state: str = Query(...)
+):
+    flow = create_google_flow()
+
+    flow.fetch_token(code=code)
+    return {
+        "code_received": True,
+        "state_received": True
     }
