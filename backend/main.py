@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,7 @@ from Routes.platform_route import router as platform_router
 from Routes.content_route import router as content_router
 from Routes.analytic_route import router as analytic_router
 from Routes.sync_job_route import router as sync_job_router
+from Routes.ai_insight_route import router as ai_insight_router
 
 from worker.sync_worker import sync_worker
 
@@ -21,6 +23,15 @@ async def lifespan(app: FastAPI):
     # Startup
     if client:
         print("database connected")
+
+    await database["content"].create_index(
+    [
+        ("user_id", 1),
+        ("platform_id", 1),
+        ("external_content_id", 1)
+    ],
+    unique=True
+    )
 
     await database["users"].create_index(
         "email",
@@ -84,9 +95,13 @@ app.include_router(
     prefix="/sync-jobs"
 )
 
+app.include_router(
+    ai_insight_router,
+    prefix="/ai-insights"
+)
 
 @app.get("/")
 async def health():
     return {"status": "ok"}
 
-  
+

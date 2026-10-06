@@ -42,6 +42,15 @@ async def create_content(
     if platform_data is None:
         return None
 
+    existing_content = await get_content_by_external_id(
+        user_id=user_id,
+        platform_id=platform_id,
+        external_content_id=external_content_id
+    )
+
+    if existing_content is not None:
+        return str(existing_content["_id"])
+
     content = {
         "user_id": user_id,
         "platform_id": platform_id,
@@ -58,7 +67,6 @@ async def create_content(
     result = await collection.insert_one(content)
 
     return str(result.inserted_id)
-
 
 async def get_user_content(user_id: str):
     collection = database["content"]
@@ -109,3 +117,16 @@ async def delete_content(
         return None
 
     return True
+
+async def get_content_by_external_id(
+    user_id: str,
+    platform_id: str,
+    external_content_id: str
+):
+    collection = database["content"]
+
+    return await collection.find_one({
+        "user_id": user_id,
+        "platform_id": platform_id,
+        "external_content_id": external_content_id
+    })

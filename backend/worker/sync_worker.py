@@ -6,6 +6,8 @@ from Services.sync_job_services import (
     complete_sync_job,
     fail_sync_job
 )
+from Services.platform_credentials import get_valid_google_credentials
+from Services.youtube_sync_service import sync_youtube
 
 
 async def sync_worker():
@@ -37,7 +39,31 @@ async def sync_worker():
 
             try:
                 # Temporary simulation of synchronization work
-                await asyncio.sleep(2)
+                credentials = await get_valid_google_credentials(
+    user_id=user_id,
+    platform_id=job["platform_id"]
+)
+
+                if credentials is None:
+                    raise Exception("Could not load Google credentials")
+
+                result = await sync_youtube(
+                    credentials=credentials,
+                    user_id=user_id,
+                    platform_id=job["platform_id"]
+                )
+                
+                print(
+                    f"SYNC WORKER: YouTube sync result: {result}"
+                )
+                
+                if not result["success"]:
+                    raise Exception("YouTube sync was unsuccessful")
+                
+                await complete_sync_job(
+                    sync_job_id=sync_job_id,
+                    user_id=user_id
+                )
 
                 raise Exception("Test Synchronization Failure")
 
