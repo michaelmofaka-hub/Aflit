@@ -1,3 +1,4 @@
+
 import './App.css'
 
 function Sidebar({ activeSection, onNavigate }) {
@@ -12,26 +13,54 @@ function Sidebar({ activeSection, onNavigate }) {
   ]
 
   return (
-    <aside className="sidebar">
-      <h2>Aflit</h2>
+    <>
+      <aside className="sidebar">
+        <h2>Aflit</h2>
 
-      <nav>
+        <nav aria-label="Main navigation">
+          {menuItems.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={
+                activeSection === item
+                  ? 'nav-item active'
+                  : 'nav-item'
+              }
+              aria-current={
+                activeSection === item ? 'page' : undefined
+              }
+              onClick={() => onNavigate(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <nav
+        className="mobile-bottom-nav"
+        aria-label="Mobile navigation"
+      >
         {menuItems.map((item) => (
-          <p
+          <button
             key={item}
+            type="button"
             className={
               activeSection === item
-                ? 'nav-item active'
-                : 'nav-item'
+                ? 'mobile-nav-item active'
+                : 'mobile-nav-item'
+            }
+            aria-current={
+              activeSection === item ? 'page' : undefined
             }
             onClick={() => onNavigate(item)}
-            style={{ cursor: 'pointer' }}
           >
             {item}
-          </p>
+          </button>
         ))}
       </nav>
-    </aside>
+    </>
   )
 }
 

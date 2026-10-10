@@ -12,11 +12,13 @@ import ContentPage from './ContentPage.jsx'
 import AudiencePage from './AudiencePage.jsx'
 import MonetizationPage from './MonetizationPage.jsx'
 import AIInsightsPage from './AIInsightsPage.jsx'
+import LandingPage from './Landing.jsx'
+import AuthPage from './AuthPage.jsx'
 import './App.css'
 
 function App() {
-  const [activeSection, setActiveSection] = useState('Dashboard')
-
+  const [activeSection, setActiveSection] = useState('Landing')
+  const [authMode, setAuthMode] = useState('login')
   const [analytics, setAnalytics] = useState([
     { day: 'Mon', views: 1200 },
     { day: 'Tue', views: 1800 },
@@ -44,6 +46,20 @@ function App() {
 
   function renderSection() {
     switch (activeSection) {
+      case 'Landing':
+        return (
+          <LandingPage
+            onGetStarted={() => {
+              setAuthMode('register')
+              setActiveSection('Auth')
+            }}
+            onLogin={() => {
+              setAuthMode('login')
+              setActiveSection('Auth')
+            }}
+          />
+        )
+
       case 'Dashboard':
         return (
           <>
@@ -70,85 +86,63 @@ function App() {
       case 'Analytics':
         return (
           <>
-      <h1>Analytics</h1>
-      <p>Understand your content performance.</p>
+            <h1>Analytics</h1>
+            <p>Understand your content performance.</p>
 
-      <AnalyticsSummary data={analytics} />
+            <AnalyticsSummary data={analytics} />
+            <AnalyticSection data={analytics} />
 
-      <AnalyticSection data={analytics} />
+            <div className="analytics-controls">
+              <label>
+                Increase each day's views by:
+                <input
+                  type="number"
+                  min="0"
+                  value={amount}
+                  onChange={(event) =>
+                    setAmount(event.target.value)
+                  }
+                />
+              </label>
 
-      <div className="analytics-controls">
-        <label>
-          Increase each day's views by:
-          <input
-            type="number"
-            min="0"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value)
-            }
-          />
-        </label>
-
-        <button onClick={updateAnalytics}>
-          Update Analytics
-        </button>
-      </div>
-    </>
-        )
-
-      case 'Content':
-        return (
-          <>
-            <ContentPerformance />
-            <ContentPage />
+              <button onClick={updateAnalytics}>
+                Update Analytics
+              </button>
+            </div>
           </>
         )
 
+      case 'Content':
+        return <ContentPage />
+
       case 'Audience':
-        return (
-        <>
-          <AudienceAnalytics />
-          <AudiencePage />
-        </>  
-        )
+        return <AudiencePage />
 
       case 'Monetization':
         return (
           <>
-          <section className="page-section">
-            <h1>Monetization</h1>
-            <p>
-              Track creator revenue and explore ways to monetize
-              your content.
-            </p>
 
-            <div className="metrics">
-              <MetricCard
-                title="Estimated Revenue"
-                value="KSh 8,500"
-              />
-            </div>
-
-            <p>
-              Monetization analytics will be expanded as real
-              platform data becomes available.
-            </p>
-          </section>
             <MonetizationPage />
           </>
         )
 
       case 'AI Insights':
-        return (
-          <>
-            <AIInsights />
-            <AIInsightsPage />
-          </>
-        )
+        return <AIInsightsPage />
 
       case 'Platforms':
         return <PlatformsSection />
+      case 'Auth':
+        return (
+          <AuthPage
+            mode={authMode}
+            onSwitchMode={() => {
+              setAuthMode(
+                authMode === 'login' ? 'register' : 'login'
+              )
+            }}
+            onBack={() => setActiveSection('Landing')}
+          />
+        )
 
       default:
         return <Welcome />
@@ -157,10 +151,13 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar
-        activeSection={activeSection}
-        onNavigate={setActiveSection}
-      />
+      {activeSection !== 'Landing' &&
+  activeSection !== 'Auth' && (
+    <Sidebar
+      activeSection={activeSection}
+      onNavigate={setActiveSection}
+    />
+  )}
 
       <main className="main-content">
         {renderSection()}
