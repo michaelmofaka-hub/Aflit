@@ -1,11 +1,13 @@
 fastapi
 uvicorn[standard]
-motor
-pymongo
+pymongo>=4.11
 pydantic
 pydantic-settings
+email-validator
 python-dotenv
-passlib[bcrypt]
 bcrypt
-python-jose[cryptography]
+PyJWT
 httpx
+google-api-python-client
+google-auth
+google-auth-oauthlib
