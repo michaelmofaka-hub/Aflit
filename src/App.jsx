@@ -14,6 +14,7 @@ import MonetizationPage from './MonetizationPage.jsx'
 import AIInsightsPage from './AIInsightsPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
+import API_BASE_URL from "./api";
 import './App.css'
 
 function App() {

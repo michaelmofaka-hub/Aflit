@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import './App.css'
 
+async function testBackend() {
+  try {
+    const response = await fetch(API_BASE_URL);
+
+    const data = await response.json();
+
+    console.log("Backend response:", data);
+  } catch (error) {
+    console.error("Backend connection failed:", error);
+  }
+}
+
 function AuthPage({ mode, onSwitchMode, onBack }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -113,6 +125,9 @@ function AuthPage({ mode, onSwitchMode, onBack }) {
           </button>
         </p>
       </div>
+      <button type="button" onClick={testBackend}>
+  Test backend
+</button>
     </div>
   )
 }
