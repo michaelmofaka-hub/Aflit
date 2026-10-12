@@ -1,35 +1,79 @@
 import { useState } from 'react'
+import { apiRequest } from './api'
+import Popup from './Popup.jsx'
 import './App.css'
 
-async function testBackend() {
-  try {
-    const response = await fetch(API_BASE_URL);
-
-    const data = await response.json();
-
-    console.log("Backend response:", data);
-  } catch (error) {
-    console.error("Backend connection failed:", error);
-  }
-}
-
-function AuthPage({ mode, onSwitchMode, onBack }) {
+function AuthPage({
+  mode,
+  onSwitchMode,
+  onBack,
+  onLoginSuccess,
+}) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
+  const [message, setMessage] = useState('')
+  const [popupType, setPopupType] = useState('success')
+  const [isLoading, setIsLoading] = useState(false)
 
   const isRegister = mode === 'register'
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
+    setIsLoading(true)
+    setMessage('')
 
-    // We'll connect this form to FastAPI next.
-    console.log({
-      mode,
-      email,
-      password,
-      username
-    })
+    try {
+      const endpoint = isRegister
+        ? '/users/register'
+        : '/users/login'
+
+      const body = isRegister
+        ? { username, email, password }
+        : { email, password }
+
+      const data = await apiRequest(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (isRegister) {
+        setPopupType('success')
+        setMessage('Account created! Redirecting to login...')
+        setPassword('')
+
+        setTimeout(() => {
+          setMessage('')
+          onSwitchMode()
+        }, 1500)
+
+        return
+      }
+
+      if (!data.access_token) {
+        throw new Error(
+          'Login succeeded, but no access token was returned.'
+        )
+      }
+
+      localStorage.setItem('access_token', data.access_token)
+
+      setPopupType('success')
+      setMessage('Login successful! Redirecting to dashboard...')
+
+      setTimeout(() => {
+        onLoginSuccess()
+      }, 1000)
+    } catch (error) {
+      setPopupType('error')
+      setMessage(error.message || 'Something went wrong.')
+      console.error('Authentication failed:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -43,7 +87,11 @@ function AuthPage({ mode, onSwitchMode, onBack }) {
       </button>
 
       <div className="auth-card">
-        <a className="brand auth-brand" href="#">
+        <a
+          className="brand auth-brand"
+          href="#"
+          onClick={(event) => event.preventDefault()}
+        >
           Aflit<span>.</span>
         </a>
 
@@ -68,6 +116,7 @@ function AuthPage({ mode, onSwitchMode, onBack }) {
                   setUsername(event.target.value)
                 }
                 placeholder="Your creator name"
+                autoComplete="username"
                 required
               />
             </label>
@@ -107,8 +156,13 @@ function AuthPage({ mode, onSwitchMode, onBack }) {
           <button
             className="get-started-button auth-submit"
             type="submit"
+            disabled={isLoading}
           >
-            {isRegister ? 'Create account' : 'Log in'}
+            {isLoading
+              ? 'Please wait...'
+              : isRegister
+                ? 'Create account'
+                : 'Log in'}
           </button>
         </form>
 
@@ -120,14 +174,19 @@ function AuthPage({ mode, onSwitchMode, onBack }) {
           <button
             type="button"
             onClick={onSwitchMode}
+            disabled={isLoading}
           >
             {isRegister ? 'Log in' : 'Register'}
           </button>
         </p>
       </div>
-      <button type="button" onClick={testBackend}>
-  Test backend
-</button>
+
+      {message && (
+        <Popup
+          message={message}
+          type={popupType}
+        />
+      )}
     </div>
   )
 }

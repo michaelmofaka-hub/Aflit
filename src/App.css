@@ -1989,3 +1989,26 @@ button:disabled {
     font-size: 26px;
   }
 }
+
+.popup_window {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  padding: 18px;
+  background: #161F32;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.popup_window.success {
+  border-left: 4px solid #5EEAD4;
+}
+
+.popup_window.error {
+  border-left: 4px solid #FDA4AF;
+}

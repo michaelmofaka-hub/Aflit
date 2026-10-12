@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useEffect } from "react";
 import Welcome from './Welcome.jsx'
 import MetricCard from './Metric.jsx'
 import AnalyticSection from './AnalyticsSection.jsx'
@@ -14,7 +15,7 @@ import MonetizationPage from './MonetizationPage.jsx'
 import AIInsightsPage from './AIInsightsPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
-import API_BASE_URL from "./api";
+import { apiRequest } from "./api";
 import './App.css'
 
 function App() {
@@ -35,7 +36,11 @@ function App() {
     { title: 'Subscribers', value: '1,240' },
     { title: 'Revenue', value: 'KSh 8,500' }
   ]
-
+  //  useEffect(() => {
+  //   apiRequest("/")
+  //     .then((data) => console.log("Backend response:", data))
+  //     .catch((error) => console.error("Backend error:", error));
+  // }, []);
   function updateAnalytics() {
     setAnalytics((prevAnalytics) =>
       prevAnalytics.map((item) => ({
@@ -44,7 +49,7 @@ function App() {
       }))
     )
   }
-
+  
   function renderSection() {
     switch (activeSection) {
       case 'Landing':
@@ -137,14 +142,14 @@ function App() {
           <AuthPage
             mode={authMode}
             onSwitchMode={() => {
-              setAuthMode(
-                authMode === 'login' ? 'register' : 'login'
+              setAuthMode((currentMode) =>
+                currentMode === 'register' ? 'login' : 'register'
               )
             }}
             onBack={() => setActiveSection('Landing')}
+            onLoginSuccess={() => setActiveSection('Dashboard')}
           />
         )
-
       default:
         return <Welcome />
     }
@@ -164,7 +169,9 @@ function App() {
         {renderSection()}
       </main>
     </div>
+    
   )
 }
+
 
 export default App
