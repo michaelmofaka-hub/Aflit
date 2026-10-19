@@ -1,7 +1,8 @@
 
 import './App.css'
 
-function Sidebar({ activeSection, onNavigate }) {
+
+function Sidebar({ activeSection, onNavigate, onLogout }) {
   const menuItems = [
     'Dashboard',
     'Analytics',
@@ -36,6 +37,15 @@ function Sidebar({ activeSection, onNavigate }) {
             </button>
           ))}
         </nav>
+        
+
+        <button
+          type="button"
+          className="nav-item"
+          onClick={onLogout}
+        >
+          Log out
+        </button>
       </aside>
 
       <nav

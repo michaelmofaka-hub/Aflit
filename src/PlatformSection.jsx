@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import './App.css'
 
@@ -40,22 +41,54 @@ function PlatformsSection() {
   const [selectedPlatform, setSelectedPlatform] =
     useState(null)
 
-  function toggleConnection(platformName) {
-    setPlatforms((previousPlatforms) =>
-      previousPlatforms.map((platform) =>
-        platform.name === platformName
-          ? {
-              ...platform,
-              connected: !platform.connected,
-              account: platform.connected
-                ? ''
-                : 'Demo Account'
-            }
-          : platform
-      )
-    )
+  const [connectingPlatform, setConnectingPlatform] =
+    useState(null)
 
-    setSelectedPlatform(platformName)
+  const [connectionError, setConnectionError] =
+    useState('')
+
+  async function toggleConnection(platformName) {
+    // Prevent another connection attempt while one is running.
+    if (connectingPlatform !== null) return
+
+    // Clear errors from previous attempts.
+    setConnectionError('')
+
+    // Show which platform is processing.
+    setConnectingPlatform(platformName)
+
+    try {
+      // DEMO ONLY: simulate a short connection delay.
+      // This does not contact Aflit's backend.
+      await new Promise((resolve) =>
+        setTimeout(resolve, 700)
+      )
+
+      setPlatforms((previousPlatforms) =>
+        previousPlatforms.map((platform) =>
+          platform.name === platformName
+            ? {
+                ...platform,
+                connected: !platform.connected,
+                account: platform.connected
+                  ? ''
+                  : 'Demo Account'
+              }
+            : platform
+        )
+      )
+
+      setSelectedPlatform(platformName)
+    } catch (error) {
+      setConnectionError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update the connection.'
+      )
+    } finally {
+      // Always stop the loading state.
+      setConnectingPlatform(null)
+    }
   }
 
   const connectedCount = platforms.filter(
@@ -102,9 +135,11 @@ function PlatformsSection() {
                     : 'connection-status'
                 }
               >
-                {platform.connected
-                  ? 'Connected'
-                  : 'Not connected'}
+                {connectingPlatform === platform.name
+                  ? 'Connecting...'
+                  : platform.connected
+                    ? 'Connected'
+                    : 'Not connected'}
               </span>
             </div>
 
@@ -118,22 +153,32 @@ function PlatformsSection() {
             )}
 
             <button
+              type="button"
               className={
                 platform.connected
                   ? 'platform-button disconnect'
                   : 'platform-button'
               }
+              disabled={connectingPlatform !== null}
               onClick={() =>
                 toggleConnection(platform.name)
               }
             >
-              {platform.connected
-                ? 'Disconnect'
-                : 'Connect account'}
+              {connectingPlatform === platform.name
+                ? 'Connecting...'
+                : platform.connected
+                  ? 'Disconnect'
+                  : 'Connect account'}
             </button>
           </article>
         ))}
       </div>
+
+      {connectionError && (
+        <p role="alert">
+          {connectionError}
+        </p>
+      )}
 
       {selected && (
         <div className="platform-details">
@@ -151,10 +196,11 @@ function PlatformsSection() {
           <p>
             {selected.connected
               ? 'This is a simulated connection. Real account data is not being retrieved yet.'
-              : 'A real connection will require the platform authorization flow and secure backend token storage.'}
+              : 'A real connection requires platform authorization and secure backend token storage.'}
           </p>
 
           <button
+            type="button"
             className="platform-button"
             onClick={() => setSelectedPlatform(null)}
           >
@@ -164,9 +210,9 @@ function PlatformsSection() {
       )}
 
       <p className="platforms-note">
-        Demo mode: connection changes are temporary and reset
-        when you reload the page. No social account is
-        actually authorized.
+        Demo mode: connection changes are temporary and
+        reset when you reload the page. No social account
+        is actually authorized.
       </p>
     </section>
   )

@@ -19,7 +19,11 @@ import { apiRequest } from "./api";
 import './App.css'
 
 function App() {
-  const [activeSection, setActiveSection] = useState('Landing')
+  
+  const [activeSection, setActiveSection] = useState(
+    localStorage.getItem('token') ? 'Dashboard' : 'Landing'
+  )
+
   const [authMode, setAuthMode] = useState('login')
   const [analytics, setAnalytics] = useState([
     { day: 'Mon', views: 1200 },
@@ -41,6 +45,12 @@ function App() {
   //     .then((data) => console.log("Backend response:", data))
   //     .catch((error) => console.error("Backend error:", error));
   // }, []);
+  function handleLogout() {
+  // Your first line: remove the token
+  localStorage.removeItem('token')
+  // Your second line: change the active section to Landing
+  setActiveSection('Landing')
+}
   function updateAnalytics() {
     setAnalytics((prevAnalytics) =>
       prevAnalytics.map((item) => ({
@@ -162,6 +172,7 @@ function App() {
     <Sidebar
       activeSection={activeSection}
       onNavigate={setActiveSection}
+      onLogout={handleLogout}
     />
   )}
 
