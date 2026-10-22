@@ -1,5 +1,7 @@
 import secrets
 
+import os
+
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
@@ -20,12 +22,13 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.readonly"
 ]
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
-REDIRECT_URI = "http://127.0.0.1:8000/platform/youtube/callback"
-
-
-# Temporary OAuth state storage for V1 development.
-# Production should use persistent storage with expiration.
+if ENVIRONMENT == "production":
+    REDIRECT_URI = "https://aflit.onrender.com/platform/youtube/callback"
+else:
+    REDIRECT_URI = "http://127.0.0.1:8000/platform/youtube/callback"
+  
 oauth_states = {}
 
 

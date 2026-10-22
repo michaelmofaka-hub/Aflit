@@ -3,7 +3,7 @@
 ======================================== */
 
 :root {
-  --bg: #0E1420;
+  --bg: #0e1420;
   --panel: #161F32;
   --panel-hover: #202B40;
   --border: #2A3448;
@@ -161,6 +161,7 @@ button:disabled {
 .sidebar nav {
   display: flex;
   flex-direction: column;
+  gap: 20px;
 }
 
 .nav-item {

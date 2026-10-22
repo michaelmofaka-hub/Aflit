@@ -10,7 +10,8 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
     'Audience',
     'Monetization',
     'AI Insights',
-    'Platforms'
+    'Platforms',
+    'Settings'
   ]
 
   return (
