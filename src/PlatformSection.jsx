@@ -1,5 +1,5 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from "react";
+import { apiRequest } from "./api";
 import './App.css'
 
 function PlatformsSection() {
@@ -37,7 +37,40 @@ function PlatformsSection() {
       description: 'Page reach, video views and audience growth.'
     }
   ])
+  useEffect(() => {
+  async function loadPlatforms() {
+    const token = localStorage.getItem("token");
 
+    // We'll add the API request here.
+    if (!token) {
+  setConnectionError("Please log in to load your platforms.");
+  return;
+}
+    const data = await apiRequest("/platform", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+    setPlatforms((previousPlatforms) =>
+  previousPlatforms.map((platform) => {
+    const backendPlatform = data.find(
+      (item) => item.platform_name === platform.name
+    );
+
+    if (!backendPlatform) {
+      return platform;
+    }
+
+    return {
+      ...platform,
+      connected: backendPlatform.status === "connected",
+    };
+  })
+);
+  }
+
+  loadPlatforms();
+}, []);
   const [selectedPlatform, setSelectedPlatform] =
     useState(null)
 
