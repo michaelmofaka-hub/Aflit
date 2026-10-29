@@ -162,9 +162,12 @@ async def youtube_callback(
 
     flow = create_google_flow()
 
+    import logging
+
     try:
         flow.fetch_token(code=code)
     except Exception:
+        logging.exception("YouTube OAuth token exchange failed")
         raise HTTPException(
             status_code=400,
             detail="Failed to exchange authorization code"
@@ -220,10 +223,6 @@ async def youtube_callback(
             detail="YouTube is already connected"
         )
 
-    return {
-        "message": "YouTube connected successfully",
-        "platform_id": platform_id,
-        "channel_id": channel_id,
-        "channel_title": channel_title,
-        "uploads_playlist_id": uploads_playlist_id
-    }
+    return RedirectResponse(
+    url="https://aflit.vercel.app/?youtube_connected=1"
+)
