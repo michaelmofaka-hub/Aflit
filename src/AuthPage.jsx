@@ -59,7 +59,7 @@ function AuthPage({
         )
       }
 
-      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('token', data.access_token)
 
       setPopupType('success')
       setMessage('Login successful! Redirecting to dashboard...')

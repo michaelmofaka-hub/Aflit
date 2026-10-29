@@ -25,6 +25,7 @@ function App() {
   )
 
   const [authMode, setAuthMode] = useState('login')
+  const [youtubeConnected, setYoutubeConnected] = useState(false)
   const [analytics, setAnalytics] = useState([
     { day: 'Mon', views: 1200 },
     { day: 'Tue', views: 1800 },
@@ -40,11 +41,16 @@ function App() {
     { title: 'Subscribers', value: '1,240' },
     { title: 'Revenue', value: 'KSh 8,500' }
   ]
-  //  useEffect(() => {
-  //   apiRequest("/")
-  //     .then((data) => console.log("Backend response:", data))
-  //     .catch((error) => console.error("Backend error:", error));
-  // }, []);
+    useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+
+  if (params.get("youtube_connected") === "1") {
+    setYoutubeConnected(true)
+  
+      window.history.replaceState({}, "", window.location.pathname)
+  }
+  }, []);
+
   function handleLogout() {
   // Your first line: remove the token
   localStorage.removeItem('token')
@@ -177,6 +183,7 @@ function App() {
   )}
 
       <main className="main-content">
+        {youtubeConnected && (<p>youtube connected successfully</p>)}
         {renderSection()}
       </main>
     </div>
