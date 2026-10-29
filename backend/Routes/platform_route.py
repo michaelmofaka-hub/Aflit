@@ -140,9 +140,9 @@ async def connect_youtube(
         prompt="consent"
     )
 
-    return RedirectResponse(
-        url=authorization_url
-    )
+    return {
+    "authorization_url": authorization_url
+}
 
 
 @router.get("/youtube/callback")
