@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+import secrets
 from fastapi.responses import RedirectResponse
 
 from googleapiclient.discovery import build
@@ -128,18 +129,19 @@ async def connect_youtube(
     current_user: dict = Depends(get_current_user)
 ):
     user_id = str(current_user["_id"])
-
-    state = create_oauth_state(user_id)
-
+    state = secrets.token_urlsafe(32)
     flow = create_google_flow()
-
+    
     authorization_url, _ = flow.authorization_url(
         state=state,
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent"
     )
-
+    
+    code_verifier = flow.code_verifier
+    
+    create_oauth_state(state, user_id, code_verifier)
     return {
     "authorization_url": authorization_url
 }
@@ -150,18 +152,20 @@ async def youtube_callback(
     code: str = Query(...),
     state: str = Query(...)
 ):
-    user_id = get_user_from_oauth_state(state)
-
-    if user_id is None:
+    oauth_data = get_user_from_oauth_state(state)
+    
+    if oauth_data is None:
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired OAuth state"
         )
-
+    
+    user_id = oauth_data["user_id"]
+    code_verifier = oauth_data["code_verifier"]
+    
     delete_oauth_state(state)
-
-    flow = create_google_flow()
-
+    
+    flow = create_google_flow(code_verifier=code_verifier)
     import logging
 
     try:

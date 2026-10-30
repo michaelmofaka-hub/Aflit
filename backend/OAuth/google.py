@@ -32,20 +32,24 @@ else:
 oauth_states = {}
 
 
-def create_google_flow():
+def create_google_flow(code_verifier: str | None = None):
     flow = Flow.from_client_config(
         GOOGLE_CLIENT_CONFIG,
         scopes=SCOPES,
+        code_verifier=code_verifier,
         redirect_uri=REDIRECT_URI
     )
 
     return flow
 
 
-def create_oauth_state(user_id: str):
+def create_oauth_state(state: str, user_id: str, code_verifier: str):
     state = secrets.token_urlsafe(32)
 
-    oauth_states[state] = user_id
+    oauth_states[state] = {
+    "user_id": user_id,
+    "code_verifier": code_verifier
+}
 
     return state
 
