@@ -44,7 +44,7 @@ def create_google_flow(code_verifier: str | None = None):
 
 
 def create_oauth_state(state: str, user_id: str, code_verifier: str):
-    state = secrets.token_urlsafe(32)
+    
 
     oauth_states[state] = {
     "user_id": user_id,
