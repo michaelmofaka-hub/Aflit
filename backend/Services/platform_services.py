@@ -87,3 +87,14 @@ async def delete_platform(
         return None
 
     return True
+
+  async def get_user_youtube(user_id: str):
+    collection = database["platform"]
+
+    platform = await collection.find_one({
+        "user_id": user_id,
+        "platform": "youtube",
+        "status": "connected"
+    })
+
+    return platform

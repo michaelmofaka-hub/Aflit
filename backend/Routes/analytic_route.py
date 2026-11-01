@@ -11,6 +11,7 @@ from Services.analytic_services import (
 
 from Routes.users import get_current_user
 
+from Services.platform_services import get_user_youtube
 
 router = APIRouter(
     tags=["Analytics"]
@@ -121,3 +122,21 @@ async def delete(
     return {
         "message": "Analytics deleted"
     }
+
+@router.get("/youtube/overview")
+async def youtube_overview(
+    current_user: dict = Depends(get_current_user)
+):
+    user_id = str(current_user["_id"])
+    youtube_account = await get_user_youtube(user_id)
+    
+    if youtube_account is None:
+        raise HTTPException(
+            status_code=404,
+            detail="YouTube account not connected"
+        )
+
+    return {
+    "connected": True,
+    "channel_id": youtube_account["external_account_id"]
+}
