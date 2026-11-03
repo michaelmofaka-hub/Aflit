@@ -17,14 +17,14 @@ async def sync_youtube(
     user_id: str,
     platform_id: str
 ):
+    # 1. Get the authenticated YouTube channel.
     channel = await get_my_channel(credentials)
 
     if channel is None:
         return {
-    "success": True,
-    "content_synced": content_synced,
-    "analytics_synced": analytics_synced
-}
+            "success": False,
+            "error": "No YouTube channel found"
+        }
 
     uploads_playlist_id = (
         channel["contentDetails"]
@@ -32,15 +32,20 @@ async def sync_youtube(
         ["uploads"]
     )
 
+    # 2. Initialise pagination and counters.
     all_videos = []
     page_token = None
 
+    content_synced = 0
+    analytics_synced = 0
+
+    # 3. Retrieve every page of uploaded videos.
     while True:
         videos_page = await get_channel_videos(
-          credentials=credentials,
-          uploads_playlist_id=uploads_playlist_id,
-          page_token=page_token
-      )
+            credentials=credentials,
+            uploads_playlist_id=uploads_playlist_id,
+            page_token=page_token
+        )
 
         all_videos.extend(videos_page["items"])
 
@@ -49,18 +54,11 @@ async def sync_youtube(
         if page_token is None:
             break
 
-        videos = all_videos
-        videos = videos_page["items"]
-
-        content_synced = 0
-        analytics_synced = 0
-
-    # Maps YouTube video ID -> Aflit MongoDB content ID
+    # 4. Save content and map YouTube IDs to Aflit IDs.
     content_map = {}
-
     video_ids = []
 
-    for video in videos:
+    for video in all_videos:
         normalized_video = normalize_video(
             video=video,
             platform_id=platform_id
@@ -84,39 +82,44 @@ async def sync_youtube(
             content_synced += 1
 
             content_map[external_content_id] = content_id
-
             video_ids.append(external_content_id)
 
-    analytics = await get_video_analytics(
-        credentials=credentials,
-        video_ids=video_ids
-    )
+    # 5. Retrieve analytics in batches of 50 videos.
+    for start in range(0, len(video_ids), 50):
+        batch_ids = video_ids[start:start + 50]
 
-    for video in analytics:
-        content_id = content_map.get(video["id"])
-
-        if content_id is None:
-            continue
-
-        normalized_analytics = normalize_video_analytics(
-            video=video,
-            content_id=content_id,
-            platform_id=platform_id
+        analytics = await get_video_analytics(
+            credentials=credentials,
+            video_ids=batch_ids
         )
 
-        await create_analytics(
-            user_id=user_id,
-            content_id=content_id,
-            platform_id=platform_id,
-            platform="youtube",
-            metrics=normalized_analytics["metrics"],
-            recorded_at=datetime.now(timezone.utc)
-        )
+        # 6. Save analytics snapshots.
+        for video in analytics:
+            content_id = content_map.get(video["id"])
 
-        analytics_synced += 1
+            if content_id is None:
+                continue
 
+            normalized_analytics = normalize_video_analytics(
+                video=video,
+                content_id=content_id,
+                platform_id=platform_id
+            )
+
+            await create_analytics(
+                user_id=user_id,
+                content_id=content_id,
+                platform_id=platform_id,
+                platform="youtube",
+                metrics=normalized_analytics["metrics"],
+                recorded_at=datetime.now(timezone.utc)
+            )
+
+            analytics_synced += 1
+
+    # 7. Return the actual sync results.
     return {
-    "success": True,
-    "content_synced": content_synced,
-    "analytics_synced": analytics_synced
-}
+        "success": True,
+        "content_synced": content_synced,
+        "analytics_synced": analytics_synced
+    }

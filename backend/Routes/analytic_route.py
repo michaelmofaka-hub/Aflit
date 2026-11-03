@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from google.oauth2.credentials import Credentials
+from Services.youtube_services import get_my_channel
 
 from Schema.analytics import AnalyticsCreate, AnalyticsResponse
 
@@ -136,7 +138,25 @@ async def youtube_overview(
             detail="YouTube account not connected"
         )
 
+    credentials = Credentials(
+        token=youtube_account["access_token"]
+    )
+
+    channel = await get_my_channel(credentials)
+
+    if channel is None:
+        raise HTTPException(
+            status_code=404,
+            detail="YouTube channel not found"
+        )
+
+    statistics = channel.get("statistics", {})
+
     return {
-    "connected": True,
-    "channel_id": youtube_account["external_account_id"]
-}
+        "connected": True,
+        "channel_id": channel["id"],
+        "channel_title": channel["snippet"]["title"],
+        "views": int(statistics.get("viewCount", 0)),
+        "subscribers": int(statistics.get("subscriberCount", 0)),
+        "video_count": int(statistics.get("videoCount", 0))
+    }

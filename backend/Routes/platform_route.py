@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-import secrets
-from fastapi.responses import RedirectResponse
 
+import logging
+import os
+import secrets
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 
 from OAuth.google import (
@@ -28,6 +31,10 @@ from Routes.users import get_current_user
 
 router = APIRouter(tags=["Platforms"])
 
+
+# --------------------------------------------------
+# CONNECT A PLATFORM
+# --------------------------------------------------
 
 @router.post("/connect")
 async def connect(
@@ -58,6 +65,10 @@ async def connect(
     }
 
 
+# --------------------------------------------------
+# GET ALL USER PLATFORMS
+# --------------------------------------------------
+
 @router.get("", response_model=list[PlatformResponse])
 async def get_platforms(
     current_user: dict = Depends(get_current_user)
@@ -70,11 +81,17 @@ async def get_platforms(
         {
             "platform_id": str(platform["_id"]),
             "platform_name": platform["platform"],
-            "status": platform["status"]
+            "status": platform["status"],
+            "account_name": platform.get("account_name"),
+            "external_account_id": platform.get("external_account_id")
         }
         for platform in platforms
     ]
 
+
+# --------------------------------------------------
+# GET ONE PLATFORM
+# --------------------------------------------------
 
 @router.get("/{platform_id}", response_model=PlatformResponse)
 async def get_one_platform(
@@ -97,9 +114,15 @@ async def get_one_platform(
     return {
         "platform_id": str(platform["_id"]),
         "platform_name": platform["platform"],
-        "status": platform["status"]
+        "status": platform["status"],
+        "account_name": platform.get("account_name"),
+        "external_account_id": platform.get("external_account_id")
     }
 
+
+# --------------------------------------------------
+# DISCONNECT A PLATFORM
+# --------------------------------------------------
 
 @router.delete("/{platform_id}")
 async def disconnect_platform(
@@ -113,7 +136,7 @@ async def disconnect_platform(
         user_id=user_id
     )
 
-    if deleted is None:
+    if not deleted:
         raise HTTPException(
             status_code=404,
             detail="Platform connection not found"
@@ -124,54 +147,75 @@ async def disconnect_platform(
     }
 
 
+# --------------------------------------------------
+# START YOUTUBE OAUTH
+# --------------------------------------------------
+
 @router.get("/youtube/connect")
 async def connect_youtube(
     current_user: dict = Depends(get_current_user)
 ):
     user_id = str(current_user["_id"])
+
     state = secrets.token_urlsafe(32)
+
     flow = create_google_flow()
-    
+
     authorization_url, _ = flow.authorization_url(
         state=state,
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent"
     )
-    
-    code_verifier = flow.code_verifier
-    
-    create_oauth_state(state, user_id, code_verifier)
-    return {
-    "authorization_url": authorization_url
-}
 
+    code_verifier = flow.code_verifier
+
+    create_oauth_state(
+        state,
+        user_id,
+        code_verifier
+    )
+
+    return {
+        "authorization_url": authorization_url
+    }
+
+
+# --------------------------------------------------
+# YOUTUBE OAUTH CALLBACK
+# --------------------------------------------------
 
 @router.get("/youtube/callback")
 async def youtube_callback(
     code: str = Query(...),
     state: str = Query(...)
 ):
+
     oauth_data = get_user_from_oauth_state(state)
-    
+
     if oauth_data is None:
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired OAuth state"
         )
-    
+
     user_id = oauth_data["user_id"]
     code_verifier = oauth_data["code_verifier"]
-    
+
     delete_oauth_state(state)
-    
-    flow = create_google_flow(code_verifier=code_verifier)
-    import logging
+
+    flow = create_google_flow(
+        code_verifier=code_verifier
+    )
 
     try:
         flow.fetch_token(code=code)
+
     except Exception:
-        logging.exception("YouTube OAuth token exchange failed")
+        logging.exception(
+            "YouTube OAuth token exchange failed"
+        )
+
         raise HTTPException(
             status_code=400,
             detail="Failed to exchange authorization code"
@@ -188,7 +232,12 @@ async def youtube_callback(
             part="snippet,contentDetails,statistics",
             mine=True
         ).execute()
+
     except Exception:
+        logging.exception(
+            "YouTube channel retrieval failed"
+        )
+
         raise HTTPException(
             status_code=502,
             detail="Failed to retrieve YouTube channel"
@@ -203,6 +252,7 @@ async def youtube_callback(
     channel = channel_response["items"][0]
 
     channel_id = channel["id"]
+
     channel_title = channel["snippet"]["title"]
 
     uploads_playlist_id = (
@@ -216,9 +266,17 @@ async def youtube_callback(
         platform="youtube",
         platform_id="youtube",
         external_account_id=channel_id,
+        account_name=channel_title,
+        uploads_playlist_id=uploads_playlist_id,
         access_token=flow.credentials.token,
         refresh_token=flow.credentials.refresh_token,
         token_expires_at=flow.credentials.expiry
+    )
+
+    logging.warning(
+        "YOUTUBE PLATFORM SAVE: user_id=%s, platform_id=%s",
+        user_id,
+        platform_id
     )
 
     if platform_id is None:
@@ -227,6 +285,19 @@ async def youtube_callback(
             detail="YouTube is already connected"
         )
 
+    environment = os.getenv(
+        "ENVIRONMENT",
+        "development"
+    ).lower()
+
+    urls = {
+        "production": "https://aflit.vercel.app/?youtube_connected=1",
+        "development": "http://localhost:5173/?youtube_connected=1"
+    }
+
     return RedirectResponse(
-    url="https://aflit.vercel.app/?youtube_connected=1"
-)
+        url=urls.get(
+            environment,
+            urls["development"]
+        )
+    )

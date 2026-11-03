@@ -1,68 +1,346 @@
-import { useState } from 'react'
+
+import { useEffect, useState } from 'react'
+import { apiRequest } from './api'
 import './App.css'
 
-function AnalyticsSection({ data }) {
-  const [timeRange, setTimeRange] = useState('7 days')
+function AnalyticsSection() {
+  const [analytics, setAnalytics] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [history, setHistory] = useState([])
 
-  const sampleData = {
-    '7 days': data,
-    '30 days': [
-      { day: 'Week 1', views: 8200 },
-      { day: 'Week 2', views: 10400 },
-      { day: 'Week 3', views: 9600 },
-      { day: 'Week 4', views: 12800 }
-    ],
-    '90 days': [
-      { day: 'Month 1', views: 28500 },
-      { day: 'Month 2', views: 34200 },
-      { day: 'Month 3', views: 41900 }
-    ]
+  const [youtubePlatformId, setYoutubePlatformId] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
+
+  // Load the YouTube platform ID.
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadYouTubePlatform() {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const platforms = await apiRequest('/platform', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const youtube = platforms.find(
+          (platform) =>
+            platform.platform_name?.toLowerCase() === 'youtube'
+        )
+
+        if (!cancelled) {
+          setYoutubePlatformId(
+            youtube?.platform_id || youtube?._id || null
+          )
+        }
+      } catch (err) {
+        console.error('Could not load YouTube platform:', err)
+      }
+    }
+
+    loadYouTubePlatform()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Fetch live YouTube channel totals.
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadAnalytics() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const token = localStorage.getItem('token')
+
+        if (!token) {
+          throw new Error('Please log in to view your analytics.')
+        }
+
+        const result = await apiRequest(
+          '/analytics/youtube/overview',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        if (!cancelled) {
+          setAnalytics(result)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.message || 'Could not load YouTube analytics.'
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadAnalytics()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Fetch saved analytics snapshots.
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadHistory() {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const records = await apiRequest('/analytics', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        if (!cancelled) {
+          setHistory(
+            records.filter(
+              (record) => record.platform === 'youtube'
+            )
+          )
+        }
+      } catch (err) {
+        console.error('Could not load analytics history:', err)
+      }
+    }
+
+    loadHistory()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Start a YouTube sync job and monitor its status.
+  async function handleSync() {
+    if (syncing) return
+
+    try {
+      setSyncing(true)
+      setSyncMessage('Starting YouTube sync...')
+
+      const token = localStorage.getItem('token')
+
+      if (!token) {
+        throw new Error('Please log in first.')
+      }
+
+      if (!youtubePlatformId) {
+        throw new Error('YouTube platform ID not found.')
+      }
+
+      const job = await apiRequest('/sync-jobs', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          platform_id: youtubePlatformId,
+          platform: 'youtube'
+        })
+      })
+
+      setSyncMessage('Sync job created. Waiting for worker...')
+
+      // Check job status every 5 seconds.
+      const maxAttempts = 60
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+
+        const status = await apiRequest(
+          `/sync-jobs/${job.sync_job_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        if (status.status === 'completed') {
+          setSyncMessage('YouTube sync completed successfully.')
+
+          // Refresh overview.
+          const updatedAnalytics = await apiRequest(
+            '/analytics/youtube/overview',
+            {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }
+          )
+
+          setAnalytics(updatedAnalytics)
+
+          // Refresh history.
+          const updatedHistory = await apiRequest('/analytics', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+
+          setHistory(
+            updatedHistory.filter(
+              (record) => record.platform === 'youtube'
+            )
+          )
+
+          return
+        }
+
+        if (status.status === 'failed') {
+          throw new Error(
+            status.error || 'YouTube synchronization failed.'
+          )
+        }
+
+        setSyncMessage(
+          status.status === 'running'
+            ? 'YouTube data is being synchronized...'
+            : 'Sync job is waiting in the queue...'
+        )
+      }
+
+      setSyncMessage(
+        'Sync is taking longer than expected. Check again shortly.'
+      )
+    } catch (err) {
+      setSyncMessage(
+        err.message || 'Could not synchronize YouTube.'
+      )
+    } finally {
+      setSyncing(false)
+    }
   }
 
-  const visibleData = sampleData[timeRange]
-  const maxViews = Math.max(...visibleData.map((item) => item.views))
+  // Group saved snapshots by date.
+  const dailyHistory = Object.values(
+    history.reduce((groups, record) => {
+      const date = new Date(
+        record.recorded_at
+      ).toLocaleDateString()
+
+      if (!groups[date]) {
+        groups[date] = {
+          day: date,
+          views: 0
+        }
+      }
+
+      groups[date].views += record.metrics?.views || 0
+
+      return groups
+    }, {})
+  ).sort(
+    (a, b) => new Date(a.day) - new Date(b.day)
+  )
+
+  if (loading) {
+    return (
+      <div className="analytics-section">
+        <h2>YouTube Analytics</h2>
+        <p>Loading channel analytics...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="analytics-section">
+        <h2>YouTube Analytics</h2>
+        <p className="connection-error">{error}</p>
+      </div>
+    )
+  }
+
+  if (!analytics) {
+    return null
+  }
+
+  const metrics = [
+    { label: 'Total views', value: analytics.views },
+    { label: 'Subscribers', value: analytics.subscribers },
+    { label: 'Videos', value: analytics.video_count }
+  ]
 
   return (
     <div className="analytics-section">
-      <h2>Analytics</h2>
-      <p>Your content performance over time.</p>
+      <h2>YouTube Analytics</h2>
 
-      <div className="time-range-selector">
-        {['7 days', '30 days', '90 days'].map((range) => (
-          <button
-            key={range}
-            className={
-              timeRange === range
-                ? 'range-button active'
-                : 'range-button'
-            }
-            onClick={() => setTimeRange(range)}
+      <p>
+        Channel performance for {analytics.channel_title}.
+      </p>
+
+      <button
+        type="button"
+        onClick={handleSync}
+        disabled={syncing || !youtubePlatformId}
+      >
+        {syncing ? 'Syncing...' : 'Sync YouTube'}
+      </button>
+
+      {syncMessage && (
+        <p role="status">{syncMessage}</p>
+      )}
+
+      <div className="analytics-summary">
+        {metrics.map((metric) => (
+          <div
+            className="analytics-summary-item"
+            key={metric.label}
           >
-            {range}
-          </button>
+            <span>{metric.label}</span>
+            <strong>
+              {Number(metric.value).toLocaleString()}
+            </strong>
+          </div>
         ))}
       </div>
 
-      {visibleData.map((item) => {
-        const width = (item.views / maxViews) * 100
+      <div className="analytics-history">
+        <h3>Video views</h3>
 
-        return (
-          <div className="analytics-row" key={item.day}>
-            <span>{item.day}</span>
+        {dailyHistory.length === 0 ? (
+          <p>
+            No saved snapshots yet. Sync your YouTube account
+            to start building history.
+          </p>
+        ) : (
+          dailyHistory.map((item) => (
+            <div
+              className="analytics-row"
+              key={item.day}
+            >
+              <span>{item.day}</span>
 
-            <div className="analytics-bar-container">
-              <div
-                className="analytics-bar"
-                style={{ width: `${width}%` }}
-              />
+              <strong className="analytics-views">
+                {item.views.toLocaleString()}
+              </strong>
             </div>
-
-            <span className="analytics-views">
-              {item.views.toLocaleString()}
-            </span>
-          </div>
-        )
-      })}
+          ))
+        )}
+      </div>
     </div>
   )
 }

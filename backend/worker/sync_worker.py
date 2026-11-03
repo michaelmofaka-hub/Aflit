@@ -6,7 +6,11 @@ from Services.sync_job_services import (
     complete_sync_job,
     fail_sync_job
 )
-from Services.platform_credentials import get_valid_google_credentials
+
+from Services.platform_credentials import (
+    get_valid_google_credentials
+)
+
 from Services.youtube_sync_service import sync_youtube
 
 
@@ -15,6 +19,7 @@ async def sync_worker():
 
     while True:
         try:
+            # Step 1: Find a pending synchronization job.
             job = await get_pending_sync_job()
 
             if job is None:
@@ -24,58 +29,78 @@ async def sync_worker():
             sync_job_id = str(job["_id"])
             user_id = job["user_id"]
 
-            print(f"SYNC WORKER: Found job {sync_job_id}")
+            print(
+                f"SYNC WORKER: Found job {sync_job_id}"
+            )
 
+            # Step 2: Attempt to claim the job.
             started_job = await start_sync_job(
                 sync_job_id=sync_job_id,
                 user_id=user_id
             )
 
             if started_job is None:
-                print("SYNC WORKER: Could not claim job")
+                print(
+                    "SYNC WORKER: Could not claim job"
+                )
+
+                await asyncio.sleep(1)
                 continue
 
-            print(f"SYNC WORKER: Job {sync_job_id} is running")
+            print(
+                f"SYNC WORKER: Job {sync_job_id} is running"
+            )
 
             try:
-                # Temporary simulation of synchronization work
+                # Step 3: Load valid Google credentials.
                 credentials = await get_valid_google_credentials(
-    user_id=user_id,
-    platform_id=job["platform_id"]
-)
+                    user_id=user_id,
+                    platform_id=started_job["platform_id"]
+                )
 
                 if credentials is None:
-                    raise Exception("Could not load Google credentials")
+                    raise Exception(
+                        "Could not load Google credentials"
+                    )
 
+                # Step 4: Synchronize YouTube data.
                 result = await sync_youtube(
                     credentials=credentials,
                     user_id=user_id,
-                    platform_id=job["platform_id"]
+                    platform_id=started_job["platform_id"]
                 )
-                
+
                 print(
                     f"SYNC WORKER: YouTube sync result: {result}"
                 )
-                
+
                 if not result["success"]:
-                    raise Exception("YouTube sync was unsuccessful")
-                
-                await complete_sync_job(
+                    raise Exception(
+                        result.get(
+                            "message",
+                            "YouTube synchronization failed"
+                        )
+                    )
+
+                # Step 5: Mark the job completed.
+                completed_job = await complete_sync_job(
                     sync_job_id=sync_job_id,
                     user_id=user_id
                 )
 
-                raise Exception("Test Synchronization Failure")
+                if completed_job is None:
+                    raise Exception(
+                        "Could not mark synchronization job as completed"
+                    )
 
-                await complete_sync_job(
-                    sync_job_id=sync_job_id,
-                    user_id=user_id
+                print(
+                    f"SYNC WORKER: Job {sync_job_id} completed"
                 )
-
-                print(f"SYNC WORKER: Job {sync_job_id} completed")
 
             except Exception as error:
-                print(f"SYNC WORKER: Job {sync_job_id} failed: {error}")
+                print(
+                    f"SYNC WORKER: Job {sync_job_id} failed: {error}"
+                )
 
                 await fail_sync_job(
                     sync_job_id=sync_job_id,
@@ -84,5 +109,8 @@ async def sync_worker():
                 )
 
         except Exception as error:
-            print(f"SYNC WORKER ERROR: {error}")
+            print(
+                f"SYNC WORKER ERROR: {error}"
+            )
+
             await asyncio.sleep(5)

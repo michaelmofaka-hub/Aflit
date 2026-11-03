@@ -1,32 +1,12 @@
-import httpx
+import asyncio
 from datetime import datetime
+
+
 from googleapiclient.discovery import build
 
 
 YOUTUBE_CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
 
-
-async def get_authenticated_channel(access_token: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            YOUTUBE_CHANNEL_URL,
-            headers={
-                "Authorization": f"Bearer {access_token}"
-            },
-            params={
-                "part": "id,snippet",
-                "mine": "true"
-            }
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        if not data.get("items"):
-            return None
-
-        return data["items"][0]
 
 def create_youtube_client(credentials):
     return build(
@@ -35,18 +15,22 @@ def create_youtube_client(credentials):
         credentials=credentials
     )
 
+
 async def get_my_channel(credentials):
     youtube = create_youtube_client(credentials)
 
-    response = youtube.channels().list(
+    request = youtube.channels().list(
         part="snippet,contentDetails,statistics",
         mine=True
-    ).execute()
+    )
+
+    response = await asyncio.to_thread(request.execute)
 
     if not response.get("items"):
         return None
 
     return response["items"][0]
+
 
 async def get_channel_videos(
     credentials,
@@ -55,17 +39,20 @@ async def get_channel_videos(
 ):
     youtube = create_youtube_client(credentials)
 
-    response = youtube.playlistItems().list(
+    request = youtube.playlistItems().list(
         part="snippet,contentDetails",
         playlistId=uploads_playlist_id,
         maxResults=50,
         pageToken=page_token
-    ).execute()
+    )
+
+    response = await asyncio.to_thread(request.execute)
 
     return {
         "items": response.get("items", []),
         "next_page_token": response.get("nextPageToken")
     }
+
 
 def normalize_video(video: dict, platform_id: str):
     snippet = video["snippet"]
@@ -78,9 +65,10 @@ def normalize_video(video: dict, platform_id: str):
         "title": snippet["title"],
         "description": snippet.get("description"),
         "published_at": datetime.fromisoformat(
-    snippet["publishedAt"].replace("Z", "+00:00")
-)
+            snippet["publishedAt"].replace("Z", "+00:00")
+        )
     }
+
 
 def normalize_video_analytics(
     video: dict,
@@ -101,19 +89,32 @@ def normalize_video_analytics(
             "saves": 0
         }
     }
-    
+
+
 async def get_video_analytics(
     credentials,
     video_ids: list[str]
 ):
-    youtube = create_youtube_client(credentials)
-
     if not video_ids:
         return []
 
-    response = youtube.videos().list(
-        part="statistics",
-        id=",".join(video_ids)
-    ).execute()
+    youtube = create_youtube_client(credentials)
 
-    return response.get("items", [])
+    all_analytics = []
+
+    # YouTube accepts a maximum of 50 video IDs per request.
+    for start in range(0, len(video_ids), 50):
+        batch = video_ids[start:start + 50]
+
+        request = youtube.videos().list(
+            part="statistics",
+            id=",".join(batch)
+        )
+
+        response = await asyncio.to_thread(request.execute)
+
+        all_analytics.extend(
+            response.get("items", [])
+        )
+
+    return all_analytics

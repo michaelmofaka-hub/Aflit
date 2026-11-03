@@ -23,7 +23,7 @@ function App() {
   const [activeSection, setActiveSection] = useState(
     localStorage.getItem('token') ? 'Dashboard' : 'Landing'
   )
-
+  const [youtubeOverview, setYoutubeOverview] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [youtubeConnected, setYoutubeConnected] = useState(false)
   const [analytics, setAnalytics] = useState([
@@ -37,11 +37,25 @@ function App() {
   const [amount, setAmount] = useState(500)
 
   const metrics = [
-    { title: 'Views', value: '12,450' },
-    { title: 'Subscribers', value: '1,240' },
-    { title: 'Revenue', value: 'KSh 8,500' }
-  ]
-    useEffect(() => {
+  {
+    title: 'Views',
+    value: youtubeOverview
+      ? youtubeOverview.views.toLocaleString()
+      : '—'
+  },
+  {
+    title: 'Subscribers',
+    value: youtubeOverview
+      ? youtubeOverview.subscribers.toLocaleString()
+      : '—'
+  },
+  {
+    title: 'Revenue',
+    value: 'Not available yet'
+  }
+]
+
+  useEffect(() => {
   const params = new URLSearchParams(window.location.search)
 
   if (params.get("youtube_connected") === "1") {
@@ -50,6 +64,21 @@ function App() {
       window.history.replaceState({}, "", window.location.pathname)
   }
   }, []);
+  useEffect(() => {
+  console.log('Overview effect ran. Active section:', activeSection)
+  if (activeSection !== 'Dashboard') return
+
+  const token = localStorage.getItem('token')
+  if (!token) return
+
+  apiRequest('/analytics/youtube/overview', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+    .then((data) => setYoutubeOverview(data))
+    .catch((error) => console.error('Could not load YouTube overview:', error))
+}, [activeSection])
 
   function handleLogout() {
   // Your first line: remove the token

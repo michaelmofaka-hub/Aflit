@@ -18,6 +18,8 @@ class PlatformCredentials(BaseModel):
     access_token: str | None = None
     refresh_token: str | None = None
     token_expires_at: datetime | None = None
+    account_name: str | None = None
+    uploads_playlist_id: str | None = None
 
 
 class PlatformResponse(BaseModel):

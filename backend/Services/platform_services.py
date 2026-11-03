@@ -1,3 +1,4 @@
+
 from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
@@ -10,20 +11,24 @@ async def connect_platform(
     platform: str,
     platform_id: str,
     external_account_id: str | None = None,
+    account_name: str | None = None,
+    uploads_playlist_id: str | None = None,
     access_token: str | None = None,
     refresh_token: str | None = None,
     token_expires_at=None
 ):
     platform_data = {
-    "user_id": user_id,
-    "platform": platform,
-    "platform_id": platform_id,
-    "external_account_id": external_account_id,
-    "access_token": access_token,
-    "refresh_token": refresh_token,
-    "token_expires_at": token_expires_at,
-    "status": "connected"
-}
+        "user_id": user_id,
+        "platform": platform,
+        "platform_id": platform_id,
+        "external_account_id": external_account_id,
+        "account_name": account_name,
+        "uploads_playlist_id": uploads_playlist_id,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_expires_at": token_expires_at,
+        "status": "connected"
+    }
 
     collection = database["platform"]
 
@@ -39,23 +44,19 @@ async def connect_platform(
 async def get_user_platforms(user_id: str):
     collection = database["platform"]
 
-    cursor = collection.find({
-        "user_id": user_id
-    })
+    cursor = collection.find({"user_id": user_id})
 
     platforms = await cursor.to_list(length=None)
 
     return platforms
 
 
-async def get_platform(
-    platform_id: str,
-    user_id: str
-):
+async def get_platform(platform_id: str, user_id: str):
     collection = database["platform"]
 
     try:
         object_id = ObjectId(platform_id)
+
     except InvalidId:
         return None
 
@@ -67,14 +68,12 @@ async def get_platform(
     return platform
 
 
-async def delete_platform(
-    platform_id: str,
-    user_id: str
-):
+async def delete_platform(platform_id: str, user_id: str):
     collection = database["platform"]
 
     try:
         object_id = ObjectId(platform_id)
+
     except InvalidId:
         return None
 
@@ -83,18 +82,14 @@ async def delete_platform(
         "user_id": user_id
     })
 
-    if result.deleted_count == 0:
-        return None
+    return result.deleted_count
 
-    return True
 
-  async def get_user_youtube(user_id: str):
+async def get_user_youtube(user_id: str):
     collection = database["platform"]
 
-    platform = await collection.find_one({
+    return await collection.find_one({
         "user_id": user_id,
         "platform": "youtube",
         "status": "connected"
     })
-
-    return platform
