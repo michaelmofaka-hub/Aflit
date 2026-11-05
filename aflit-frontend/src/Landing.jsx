@@ -1,4 +1,6 @@
+
 import './App.css'
+import './style.css'
 
 function LandingPage({ onGetStarted, onLogin }) {
   return (
@@ -12,42 +14,44 @@ function LandingPage({ onGetStarted, onLogin }) {
           <a href="#features">Features</a>
           <a href="#about">About</a>
 
-          <button
-            className="login-button"
-            onClick={onLogin}
-          >
+          <button className="login-button" onClick={onLogin}>
             Log in
           </button>
         </div>
       </nav>
 
       <section className="landing-hero" id="about">
-        <p className="eyebrow">
-          YOUR CREATOR JOURNEY, ALL IN ONE PLACE
-        </p>
+        <div className="left">
 
-        <h1>
-          Turn your content
-          <br />
-          into <span>real growth.</span>
-        </h1>
+          <h1>
+            Turn your content
+            <br />
+            into <span>real growth.</span>
+          </h1>
 
-        <p className="hero-description">
-          Understand your audience, track your performance,
-          and discover smarter ways to grow across platforms.
-        </p>
+          <p className="hero-description">
+            Understand your audience, track your performance,
+            and discover smarter ways to grow across platforms.
+          </p>
 
-        <button
-          className="get-started-button"
-          onClick={onGetStarted}
-        >
-          Get started
-        </button>
+          <button
+            className="get-started-button"
+            onClick={onGetStarted}
+          >
+            Get started
+          </button>
+        </div>
+
+        <div className="landing-hero-visual">
+          <img
+                  src="dashboard.png"
+                  alt="../Aflit creator analytics dashboard"
+  />
+        </div>
       </section>
 
       <section className="landing-features" id="features">
         <div className="features-heading">
-          <p className="eyebrow">BUILT FOR CREATORS</p>
 
           <h2>Everything you need to grow.</h2>
 
@@ -59,10 +63,8 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="feature-grid">
           <article className="feature-card">
-            <div className="feature-icon">↗</div>
-
+            <img src="./analytics.png" className='image-first' alt="Monetization" />
             <h3>Creator Analytics</h3>
-
             <p>
               Track views, subscribers, audience activity,
               and content performance in one place.
@@ -70,10 +72,8 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <div className="feature-icon">◆</div>
-
+            <img src="monetization.png" alt="Monetization" />
             <h3>Monetization</h3>
-
             <p>
               Understand your revenue and explore ways
               to build sustainable creator income.
@@ -81,10 +81,8 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <div className="feature-icon">✦</div>
-
+            <img src="botagent.png" alt="AI Insights" />
             <h3>AI Insights</h3>
-
             <p>
               Turn your analytics into practical ideas
               for improving your content strategy.
@@ -92,12 +90,14 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
         </div>
       </section>
+
       <footer className="landing-footer">
         <div className="footer-top">
           <div className="footer-brand">
             <a className="brand" href="#">
               Aflit<span>.</span>
             </a>
+
             <p>
               Helping creators understand their data,
               grow their audience, and build their future.
@@ -129,9 +129,10 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="footer-bottom">
           <p>
-            © {new Date().getFullYear()} Mofo Agencies/Company.
+            © {new Date().getFullYear()} Mofo Agencies.
             All rights reserved.
           </p>
+
           <span>Built for creators. Designed for growth.</span>
         </div>
       </footer>
