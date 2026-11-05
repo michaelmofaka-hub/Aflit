@@ -71,6 +71,10 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
           </button>
         ))}
       </nav>
+      <nav className='payment section'>
+        <h3>change plan</h3>
+        <p>available plans</p>
+      </nav>
     </>
   )
 }
