@@ -1,9 +1,7 @@
-import secrets
 
 import os
 
 from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build
 
 from Config.settings import settings
 
@@ -22,13 +20,24 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.readonly"
 ]
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+ENVIRONMENT = os.getenv(
+    "ENVIRONMENT",
+    "development"
+).lower()
+
 
 if ENVIRONMENT == "production":
-    REDIRECT_URI = "https://aflit.onrender.com/platform/youtube/callback"
+    REDIRECT_URI = (
+        "https://aflit.onrender.com/platform/youtube/callback"
+    )
 else:
-    REDIRECT_URI = "http://127.0.0.1:8000/platform/youtube/callback"
-  
+    REDIRECT_URI = (
+        "http://127.0.0.1:8000/platform/youtube/callback"
+    )
+
+
+# Temporary in-memory OAuth state storage
 oauth_states = {}
 
 
@@ -43,13 +52,15 @@ def create_google_flow(code_verifier: str | None = None):
     return flow
 
 
-def create_oauth_state(state: str, user_id: str, code_verifier: str):
-    
-
+def create_oauth_state(
+    state: str,
+    user_id: str,
+    code_verifier: str
+):
     oauth_states[state] = {
-    "user_id": user_id,
-    "code_verifier": code_verifier
-}
+        "user_id": user_id,
+        "code_verifier": code_verifier
+    }
 
     return state
 
