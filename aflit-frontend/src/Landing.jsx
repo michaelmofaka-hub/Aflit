@@ -44,7 +44,7 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="landing-hero-visual">
           <img
-            src="./public/dashboard.png"
+            src="/dashboard.png"
             alt="Aflit creator analytics dashboard"
           />
         </div>
@@ -63,7 +63,7 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="feature-grid">
           <article className="feature-card">
-            <img src="./pubic/analytics.png" className="image-first" alt="Creator Analytics" />
+            <img src="/analytics.png" className="image-first" alt="Creator Analytics" />
             <h3>Creator Analytics</h3>
             <p>
               Track views, subscribers, audience activity,
@@ -72,7 +72,7 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <img src="./public/monetization.png" alt="Monetization" />
+            <img src="/monetization.png" alt="Monetization" />
             <h3>Monetization</h3>
             <p>
               Understand your revenue and explore ways
@@ -81,7 +81,7 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <img src="./public/botagent.png" alt="AI Insights" />
+            <img src="/botagent.png" alt="AI Insights" />
             <h3>AI Insights</h3>
             <p>
               Turn your analytics into practical ideas
