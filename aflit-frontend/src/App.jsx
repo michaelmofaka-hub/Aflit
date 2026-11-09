@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useEffect } from "react";
+
+import { useState, useEffect } from 'react'
 import Welcome from './Welcome.jsx'
 import MetricCard from './Metric.jsx'
 import AnalyticSection from './AnalyticsSection.jsx'
@@ -15,17 +15,19 @@ import MonetizationPage from './MonetizationPage.jsx'
 import AIInsightsPage from './AIInsightsPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
-import { apiRequest } from "./api";
+import { apiRequest } from './api'
 import './App.css'
 
 function App() {
-  
+
   const [activeSection, setActiveSection] = useState(
     localStorage.getItem('token') ? 'Dashboard' : 'Landing'
   )
-  const [youtubeOverview, setYoutubeOverview] = useState(null)
+
+  const [overview, setOverview] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [youtubeConnected, setYoutubeConnected] = useState(false)
+
   const [analytics, setAnalytics] = useState([
     { day: 'Mon', views: 1200 },
     { day: 'Tue', views: 1800 },
@@ -37,55 +39,77 @@ function App() {
   const [amount, setAmount] = useState(500)
 
   const metrics = [
-  {
-    title: 'Views',
-    value: youtubeOverview
-      ? youtubeOverview.views.toLocaleString()
-      : '—'
-  },
-  {
-    title: 'Subscribers',
-    value: youtubeOverview
-      ? youtubeOverview.subscribers.toLocaleString()
-      : '—'
-  },
-  {
-    title: 'Revenue',
-    value: 'Not available yet'
-  }
-]
-
-  useEffect(() => {
-  const params = new URLSearchParams(window.location.search)
-
-  if (params.get("youtube_connected") === "1") {
-    setYoutubeConnected(true)
-  
-      window.history.replaceState({}, "", window.location.pathname)
-  }
-  }, []);
-  useEffect(() => {
-  console.log('Overview effect ran. Active section:', activeSection)
-  if (activeSection !== 'Dashboard') return
-
-  const token = localStorage.getItem('token')
-  if (!token) return
-
-  apiRequest('/analytics/youtube/overview', {
-    headers: {
-      Authorization: `Bearer ${token}`
+    {
+      title: 'Views',
+      value: overview?.views != null
+        ? Number(overview.views).toLocaleString()
+        : '—'
+    },
+    {
+      title: 'Subscribers',
+      value: overview?.subscribers != null
+        ? Number(overview.subscribers).toLocaleString()
+        : '—'
+    },
+    {
+      title: 'Revenue',
+      value: '—'
     }
-  })
-    .then((data) => setYoutubeOverview(data))
-    .catch((error) => console.error('Could not load YouTube overview:', error))
-}, [activeSection])
+  ]
+
+  // Detect successful YouTube connection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+
+    if (params.get('youtube_connected') === '1') {
+      setYoutubeConnected(true)
+
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname
+      )
+    }
+  }, [])
+
+  // Fetch platform overview
+  useEffect(() => {
+    console.log(
+      'Overview effect ran. Active section:',
+      activeSection
+    )
+
+    if (activeSection !== 'Dashboard') return
+
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    apiRequest('/analytics/youtube/overview', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+      .then((data) => {
+        setOverview({
+          ...data,
+          platform: data.platform || 'youtube'
+        })
+      })
+      .catch((error) => {
+        console.error(
+          'Could not load platform overview:',
+          error
+        )
+      })
+
+  }, [activeSection])
 
   function handleLogout() {
-  // Your first line: remove the token
-  localStorage.removeItem('token')
-  // Your second line: change the active section to Landing
-  setActiveSection('Landing')
-}
+    localStorage.removeItem('token')
+    setActiveSection('Landing')
+    setOverview(null)
+  }
+
   function updateAnalytics() {
     setAnalytics((prevAnalytics) =>
       prevAnalytics.map((item) => ({
@@ -94,9 +118,10 @@ function App() {
       }))
     )
   }
-  
+
   function renderSection() {
     switch (activeSection) {
+
       case 'Landing':
         return (
           <LandingPage
@@ -116,20 +141,19 @@ function App() {
           <>
             <Welcome />
 
-            <div className="metrics">
-              {metrics.map((metric) => (
-                <MetricCard
-                  key={metric.title}
-                  title={metric.title}
-                  value={metric.value}
-                />
-              ))}
-            </div>
+            <MetricCard
+              platform={overview?.platform || 'youtube'}
+              metrics={metrics}
+            />
 
             <AnalyticSection data={analytics} />
+
             <ContentPerformance />
+
             <AudienceAnalytics />
+
             <AIInsights />
+
             <PlatformsSection />
           </>
         )
@@ -141,11 +165,13 @@ function App() {
             <p>Understand your content performance.</p>
 
             <AnalyticsSummary data={analytics} />
+
             <AnalyticSection data={analytics} />
 
             <div className="analytics-controls">
               <label>
                 Increase each day's views by:
+
                 <input
                   type="number"
                   min="0"
@@ -170,31 +196,32 @@ function App() {
         return <AudiencePage />
 
       case 'Monetization':
-        return (
-          <>
-
-            <MonetizationPage />
-          </>
-        )
+        return <MonetizationPage />
 
       case 'AI Insights':
         return <AIInsightsPage />
 
       case 'Platforms':
         return <PlatformsSection />
+
       case 'Auth':
         return (
           <AuthPage
             mode={authMode}
             onSwitchMode={() => {
               setAuthMode((currentMode) =>
-                currentMode === 'register' ? 'login' : 'register'
+                currentMode === 'register'
+                  ? 'login'
+                  : 'register'
               )
             }}
             onBack={() => setActiveSection('Landing')}
-            onLoginSuccess={() => setActiveSection('Dashboard')}
+            onLoginSuccess={() =>
+              setActiveSection('Dashboard')
+            }
           />
         )
+
       default:
         return <Welcome />
     }
@@ -202,23 +229,26 @@ function App() {
 
   return (
     <div className="app-layout">
+
       {activeSection !== 'Landing' &&
-  activeSection !== 'Auth' && (
-    <Sidebar
-      activeSection={activeSection}
-      onNavigate={setActiveSection}
-      onLogout={handleLogout}
-    />
-  )}
+        activeSection !== 'Auth' && (
+          <Sidebar
+            activeSection={activeSection}
+            onNavigate={setActiveSection}
+            onLogout={handleLogout}
+          />
+        )}
 
       <main className="main-content">
-        {youtubeConnected && (<p>youtube connected successfully</p>)}
         {renderSection()}
+
+        {youtubeConnected && (
+          <p>Youtube connected successfully</p>
+        )}
       </main>
+
     </div>
-    
   )
 }
-
 
 export default App

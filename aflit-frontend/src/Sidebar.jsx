@@ -1,8 +1,21 @@
-
 import './App.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
+import {
+  faHouse,
+  faChartLine,
+  faClapperboard,
+  faUsers,
+  faWallet,
+  faWandMagicSparkles,
+  faLayerGroup,
+  faGear,
+  faRightFromBracket
+} from '@fortawesome/free-solid-svg-icons'
 
 function Sidebar({ activeSection, onNavigate, onLogout }) {
+
+  // Navigation items
   const menuItems = [
     'Dashboard',
     'Analytics',
@@ -13,6 +26,18 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
     'Platforms',
     'Settings'
   ]
+
+  // Icon assigned to each navigation item
+  const menuIcons = {
+    Dashboard: faHouse,
+    Analytics: faChartLine,
+    Content: faClapperboard,
+    Audience: faUsers,
+    Monetization: faWallet,
+    'AI Insights': faWandMagicSparkles,
+    Platforms: faLayerGroup,
+    Settings: faGear
+  }
 
   return (
     <>
@@ -34,17 +59,24 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
               }
               onClick={() => onNavigate(item)}
             >
+              <i className="nav-icon" aria-hidden="true">
+                <FontAwesomeIcon icon={menuIcons[item]} />
+              </i>
+
               {item}
             </button>
           ))}
         </nav>
-        
 
         <button
           type="button"
           className="nav-item"
           onClick={onLogout}
         >
+          <i className="nav-icon" aria-hidden="true">
+            <FontAwesomeIcon icon={faRightFromBracket} />
+          </i>
+
           Log out
         </button>
       </aside>
@@ -57,6 +89,8 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
           <button
             key={item}
             type="button"
+            aria-label={item}
+            title={item}
             className={
               activeSection === item
                 ? 'mobile-nav-item active'
@@ -67,13 +101,11 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
             }
             onClick={() => onNavigate(item)}
           >
-            {item}
+            <i className="nav-icon" aria-hidden="true">
+              <FontAwesomeIcon icon={menuIcons[item]} />
+            </i>
           </button>
         ))}
-      </nav>
-      <nav className='payment section'>
-        <h3>change plan</h3>
-        <p>available plans</p>
       </nav>
     </>
   )

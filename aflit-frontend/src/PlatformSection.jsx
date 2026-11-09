@@ -1,47 +1,60 @@
 
 import { useEffect, useState } from 'react'
 import { apiRequest } from './api'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
+import {
+  faYoutube,
+  faTiktok,
+  faInstagram,
+  faFacebook
+} from '@fortawesome/free-brands-svg-icons'
+
 import './App.css'
 
 const INITIAL_PLATFORMS = [
   {
     name: 'YouTube',
-    icon: '▶',
+    icon: faYoutube,
     color: '#FF4545',
     connected: false,
     account: '',
     backendId: null,
     status: 'disconnected',
+    image: '/youtube.png',
     description: 'Videos, views, subscribers and revenue.'
   },
   {
     name: 'TikTok',
-    icon: '♪',
+    icon: faTiktok,
     color: '#5EEAD4',
     connected: false,
     account: '',
     backendId: null,
     status: 'disconnected',
+    image: '/tiktok.png',
     description: 'Video views, followers and engagement.'
   },
   {
     name: 'Instagram',
-    icon: '◎',
+    icon: faInstagram,
     color: '#E879F9',
     connected: false,
     account: '',
     backendId: null,
     status: 'disconnected',
+    image: '/instagram.png',
     description: 'Reels, followers and audience engagement.'
   },
   {
     name: 'Facebook',
-    icon: 'f',
+    icon: faFacebook,
     color: '#60A5FA',
     connected: false,
     account: '',
     backendId: null,
     status: 'disconnected',
+    image: '/facebook.png',
     description: 'Page reach, video views and audience growth.'
   }
 ]
@@ -281,7 +294,7 @@ function PlatformsSection() {
       <div className="platforms-heading">
         <div>
           <h1>Creator Platforms</h1>
-          <p>Manage the social accounts you want to track.</p>
+          <p>Manage all of your social accounts you want to track.</p>
         </div>
 
         <div className="platforms-count">
@@ -306,7 +319,7 @@ function PlatformsSection() {
                 className="platform-icon"
                 style={{ color: platform.color }}
               >
-                {platform.icon}
+                <FontAwesomeIcon icon={platform.icon} />
               </span>
 
               <span
