@@ -8,7 +8,6 @@ import ContentPerformance from './ContentPerformance.jsx'
 import AudienceAnalytics from './AudienceAnalytics.jsx'
 import AIInsights from './AiInsights.jsx'
 import PlatformsSection from './PlatformSection.jsx'
-import AnalyticsSummary from './AnalyticsSummary.jsx'
 import ContentPage from './ContentPage.jsx'
 import AudiencePage from './AudiencePage.jsx'
 import MonetizationPage from './MonetizationPage.jsx'
@@ -19,7 +18,6 @@ import { apiRequest } from './api'
 import './App.css'
 
 function App() {
-
   const [activeSection, setActiveSection] = useState(
     localStorage.getItem('token') ? 'Dashboard' : 'Landing'
   )
@@ -27,16 +25,6 @@ function App() {
   const [overview, setOverview] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [youtubeConnected, setYoutubeConnected] = useState(false)
-
-  const [analytics, setAnalytics] = useState([
-    { day: 'Mon', views: 1200 },
-    { day: 'Tue', views: 1800 },
-    { day: 'Wed', views: 1500 },
-    { day: 'Thu', views: 2400 },
-    { day: 'Fri', views: 2100 }
-  ])
-
-  const [amount, setAmount] = useState(500)
 
   const metrics = [
     {
@@ -57,7 +45,7 @@ function App() {
     }
   ]
 
-  // Detect successful YouTube connection
+  // Detect successful YouTube connection.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
 
@@ -72,56 +60,56 @@ function App() {
     }
   }, [])
 
-  // Fetch platform overview
+  // Fetch live YouTube channel overview.
   useEffect(() => {
-    console.log(
-      'Overview effect ran. Active section:',
-      activeSection
-    )
-
     if (activeSection !== 'Dashboard') return
 
     const token = localStorage.getItem('token')
     if (!token) return
 
-    apiRequest('/analytics/youtube/overview', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-      .then((data) => {
-        setOverview({
-          ...data,
-          platform: data.platform || 'youtube'
-        })
-      })
-      .catch((error) => {
+    let cancelled = false
+
+    async function loadOverview() {
+      try {
+        const data = await apiRequest(
+          '/analytics/youtube/overview',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        if (!cancelled) {
+          setOverview({
+            ...data,
+            platform: 'youtube'
+          })
+        }
+      } catch (error) {
         console.error(
           'Could not load platform overview:',
           error
         )
-      })
+      }
+    }
 
+    loadOverview()
+
+    return () => {
+      cancelled = true
+    }
   }, [activeSection])
 
   function handleLogout() {
     localStorage.removeItem('token')
     setActiveSection('Landing')
     setOverview(null)
-  }
-
-  function updateAnalytics() {
-    setAnalytics((prevAnalytics) =>
-      prevAnalytics.map((item) => ({
-        ...item,
-        views: item.views + Number(amount)
-      }))
-    )
+    setYoutubeConnected(false)
   }
 
   function renderSection() {
     switch (activeSection) {
-
       case 'Landing':
         return (
           <LandingPage
@@ -146,7 +134,7 @@ function App() {
               metrics={metrics}
             />
 
-            <AnalyticSection data={analytics} />
+            <AnalyticSection />
 
             <ContentPerformance />
 
@@ -159,35 +147,7 @@ function App() {
         )
 
       case 'Analytics':
-        return (
-          <>
-            <h1>Analytics</h1>
-            <p>Understand your content performance.</p>
-
-            <AnalyticsSummary data={analytics} />
-
-            <AnalyticSection data={analytics} />
-
-            <div className="analytics-controls">
-              <label>
-                Increase each day's views by:
-
-                <input
-                  type="number"
-                  min="0"
-                  value={amount}
-                  onChange={(event) =>
-                    setAmount(event.target.value)
-                  }
-                />
-              </label>
-
-              <button onClick={updateAnalytics}>
-                Update Analytics
-              </button>
-            </div>
-          </>
-        )
+        return <AnalyticSection />
 
       case 'Content':
         return <ContentPage />
@@ -229,7 +189,6 @@ function App() {
 
   return (
     <div className="app-layout">
-
       {activeSection !== 'Landing' &&
         activeSection !== 'Auth' && (
           <Sidebar
@@ -246,7 +205,6 @@ function App() {
           <p>Youtube connected successfully</p>
         )}
       </main>
-
     </div>
   )
 }
