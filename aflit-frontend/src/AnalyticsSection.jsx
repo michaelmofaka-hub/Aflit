@@ -3,11 +3,15 @@ import { useEffect, useState } from 'react'
 import { apiRequest } from './api'
 import './App.css'
 
-function AnalyticsSection() {
+function AnalyticsSection({
+  dailyHistory = [],
+  onHistoryRefresh,
+  historyLoading = false,
+  historyError = ''
+}) {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [history, setHistory] = useState([])
 
   const [youtubePlatformId, setYoutubePlatformId] = useState(null)
   const [syncing, setSyncing] = useState(false)
@@ -29,7 +33,7 @@ function AnalyticsSection() {
         })
 
         const youtube = platforms.find(
-          (platform) =>
+          platform =>
             platform.platform_name?.toLowerCase() === 'youtube'
         )
 
@@ -97,40 +101,6 @@ function AnalyticsSection() {
     }
   }, [])
 
-  // Fetch saved analytics snapshots.
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadHistory() {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) return
-
-        const records = await apiRequest('/analytics', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        if (!cancelled) {
-          setHistory(
-            records.filter(
-              (record) => record.platform === 'youtube'
-            )
-          )
-        }
-      } catch (err) {
-        console.error('Could not load analytics history:', err)
-      }
-    }
-
-    loadHistory()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   // Start YouTube synchronization.
   async function handleSync() {
     if (syncing) return
@@ -166,7 +136,7 @@ function AnalyticsSection() {
       const maxAttempts = 60
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, 5000))
+        await new Promise(resolve => setTimeout(resolve, 5000))
 
         const status = await apiRequest(
           `/sync-jobs/${job.sync_job_id}`,
@@ -178,8 +148,9 @@ function AnalyticsSection() {
         )
 
         if (status.status === 'completed') {
-          setSyncMessage('YouTube sync completed successfully.')
+          setSyncMessage('Sync completed. Refreshing analytics...')
 
+          // Refresh live channel overview.
           const updatedAnalytics = await apiRequest(
             '/analytics/youtube/overview',
             {
@@ -191,18 +162,19 @@ function AnalyticsSection() {
 
           setAnalytics(updatedAnalytics)
 
-          const updatedHistory = await apiRequest('/analytics', {
-            headers: {
-              Authorization: `Bearer ${token}`
+          // Refresh shared history in App.jsx.
+          if (onHistoryRefresh) {
+            try {
+              await onHistoryRefresh()
+            } catch (refreshError) {
+              setSyncMessage(
+                'Sync completed, but analytics history could not refresh.'
+              )
+              return
             }
-          })
+          }
 
-          setHistory(
-            updatedHistory.filter(
-              (record) => record.platform === 'youtube'
-            )
-          )
-
+          setSyncMessage('YouTube sync completed successfully.')
           return
         }
 
@@ -231,75 +203,12 @@ function AnalyticsSection() {
     }
   }
 
-  // Group snapshots by individual video.
-  const snapshotsByContent = history.reduce((groups, record) => {
-    if (!record.content_id || !record.recorded_at) {
-      return groups
-    }
-
-    if (!groups[record.content_id]) {
-      groups[record.content_id] = []
-    }
-
-    groups[record.content_id].push(record)
-
-    return groups
-  }, {})
-
-  // Calculate views gained between consecutive snapshots.
-  const growthByDate = {}
-
-  Object.values(snapshotsByContent).forEach((snapshots) => {
-    snapshots.sort(
-      (a, b) =>
-        new Date(a.recorded_at) - new Date(b.recorded_at)
-    )
-
-    for (let i = 1; i < snapshots.length; i++) {
-      const previousViews = Number(
-        snapshots[i - 1].metrics?.views || 0
-      )
-
-      const currentViews = Number(
-        snapshots[i].metrics?.views || 0
-      )
-
-      const viewsGained = Math.max(
-        currentViews - previousViews,
-        0
-      )
-
-      const date = new Date(
-        snapshots[i].recorded_at
-      ).toISOString().slice(0, 10)
-
-      if (!growthByDate[date]) {
-        growthByDate[date] = {
-          date,
-          views: 0
-        }
-      }
-
-      growthByDate[date].views += viewsGained
-    }
-  })
-
-  // Prepare chronological growth history.
-  const dailyHistory = Object.values(growthByDate)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((item) => ({
-      day: new Date(
-        `${item.date}T00:00:00`
-      ).toLocaleDateString(),
-      views: item.views
-    }))
-
+  // Chart data scaling.
   const maxDailyViews = Math.max(
-    ...dailyHistory.map((item) => item.views),
+    ...dailyHistory.map(item => item.views),
     1
   )
 
-  // Chart dimensions.
   const chartWidth = 720
   const chartHeight = 260
   const chartPadding = 36
@@ -310,14 +219,16 @@ function AnalyticsSection() {
       ? chartWidth / 2
       : chartPadding +
         index *
-        ((chartWidth - chartPadding * 2) /
-          (dailyHistory.length - 1))
+        (
+          (chartWidth - chartPadding * 2) /
+          (dailyHistory.length - 1)
+        )
 
     const y =
       chartHeight -
       chartPadding -
       (item.views / maxDailyViews) *
-        (chartHeight - chartPadding * 2)
+      (chartHeight - chartPadding * 2)
 
     return {
       x,
@@ -328,7 +239,7 @@ function AnalyticsSection() {
   })
 
   const chartLine = chartPoints
-    .map((point) => `${point.x},${point.y}`)
+    .map(point => `${point.x},${point.y}`)
     .join(' ')
 
   // Loading state.
@@ -450,7 +361,15 @@ function AnalyticsSection() {
             </div>
           </div>
 
-          {dailyHistory.length === 0 ? (
+          {historyLoading ? (
+            <div className="analytics-chart-empty">
+              <p>Loading growth history...</p>
+            </div>
+          ) : historyError ? (
+            <div className="analytics-chart-empty">
+              <p>{historyError}</p>
+            </div>
+          ) : dailyHistory.length === 0 ? (
             <div className="analytics-chart-empty">
               <p>No growth history available yet.</p>
               <span>
@@ -469,11 +388,13 @@ function AnalyticsSection() {
                   aria-label="Views gained between YouTube syncs"
                 >
                   {/* Horizontal grid lines */}
-                  {[0, 1, 2, 3].map((line) => {
+                  {[0, 1, 2, 3].map(line => {
                     const y =
                       chartPadding +
                       line *
-                      ((chartHeight - chartPadding * 2) / 3)
+                      (
+                        (chartHeight - chartPadding * 2) / 3
+                      )
 
                     return (
                       <line
@@ -525,6 +446,7 @@ function AnalyticsSection() {
                 <span>
                   {dailyHistory.length} recorded growth periods
                 </span>
+
                 <strong>
                   {dailyHistory
                     .reduce((total, item) => total + item.views, 0)

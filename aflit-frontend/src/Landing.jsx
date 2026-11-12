@@ -2,11 +2,11 @@
 import './App.css'
 import './style.css'
 
-function LandingPage({ onGetStarted, onLogin }) {
+function LandingPage({ onGetStarted, onLogin, onPrivacy }) {
   return (
     <div className="landing-page">
       <nav className="landing-nav">
-        <a className="brand" href="#">
+        <a className="brand" href="/">
           Aflit<span>.</span>
         </a>
 
@@ -14,7 +14,10 @@ function LandingPage({ onGetStarted, onLogin }) {
           <a href="#features">Features</a>
           <a href="#about">About</a>
 
-          <button className="login-button" onClick={onLogin}>
+          <button
+            className="login-button"
+            onClick={onLogin}
+          >
             Log in
           </button>
         </div>
@@ -22,7 +25,6 @@ function LandingPage({ onGetStarted, onLogin }) {
 
       <section className="landing-hero" id="about">
         <div className="left">
-
           <h1>
             Turn your content
             <br />
@@ -52,7 +54,6 @@ function LandingPage({ onGetStarted, onLogin }) {
 
       <section className="landing-features" id="features">
         <div className="features-heading">
-
           <h2>Everything you need to grow.</h2>
 
           <p>
@@ -63,8 +64,14 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="feature-grid">
           <article className="feature-card">
-            <img src="/analytics.png" className="image-first" alt="Creator Analytics" />
+            <img
+              src="/analytics.png"
+              className="image-first"
+              alt="Creator Analytics"
+            />
+
             <h3>Creator Analytics</h3>
+
             <p>
               Track views, subscribers, audience activity,
               and content performance in one place.
@@ -72,8 +79,13 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <img src="/monetization.png" alt="Monetization" />
+            <img
+              src="/monetization.png"
+              alt="Monetization"
+            />
+
             <h3>Monetization</h3>
+
             <p>
               Understand your revenue and explore ways
               to build sustainable creator income.
@@ -81,8 +93,13 @@ function LandingPage({ onGetStarted, onLogin }) {
           </article>
 
           <article className="feature-card">
-            <img src="/botagent.png" alt="AI Insights" />
+            <img
+              src="/botagent.png"
+              alt="AI Insights"
+            />
+
             <h3>AI Insights</h3>
+
             <p>
               Turn your analytics into practical ideas
               for improving your content strategy.
@@ -94,7 +111,7 @@ function LandingPage({ onGetStarted, onLogin }) {
       <footer className="landing-footer">
         <div className="footer-top">
           <div className="footer-brand">
-            <a className="brand" href="#">
+            <a className="brand" href="/">
               Aflit<span>.</span>
             </a>
 
@@ -114,14 +131,24 @@ function LandingPage({ onGetStarted, onLogin }) {
             <div>
               <h4>Account</h4>
               <button onClick={onLogin}>Log in</button>
-              <button onClick={onGetStarted}>Get started</button>
+              <button onClick={onGetStarted}>
+                Get started
+              </button>
             </div>
 
             <div>
-              <h4>Company</h4>
-              <span>Mofo Agencies/Company</span>
-              <a href="mailto:info@mofoagencies.com">
-                Contact
+              <h4>Legal & Support</h4>
+
+              <button onClick={onPrivacy}>
+                Privacy Policy
+              </button>
+
+              <a href="mailto:michaelmofaka@gmail.com">
+                Contact Support
+              </a>
+
+              <a href="mailto:michaelmofaka@gmail.com">
+                Privacy Enquiries
               </a>
             </div>
           </div>
@@ -129,7 +156,7 @@ function LandingPage({ onGetStarted, onLogin }) {
 
         <div className="footer-bottom">
           <p>
-            © {new Date().getFullYear()} Mofo Agencies.
+            © {new Date().getFullYear()} Aflit.
             All rights reserved.
           </p>
 

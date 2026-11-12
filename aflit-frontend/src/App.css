@@ -1397,6 +1397,311 @@ button:disabled {
 }
 
 /* ========================================
+   CONTENT WORKSPACE
+======================================== */
+
+.content-workspace-heading,
+.content-library-toolbar,
+.content-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.content-workspace-heading {
+  margin-bottom: 28px;
+}
+
+.content-workspace-heading h1,
+.content-panel-heading h2,
+.content-featured-panel h2 {
+  margin: 8px 0;
+  color: #fff;
+}
+
+.content-workspace-heading p,
+.content-panel-heading p,
+.content-featured-date {
+  color: #94a3b8;
+  margin: 0;
+}
+
+.content-create-button {
+  background: #f2a93b;
+  color: #101827;
+  border: none;
+  border-radius: 9px;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.content-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: #202d42;
+  border: 1px solid #2a3448;
+  color: #cbd5e1;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.content-notice button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.content-library-toolbar {
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.content-filters {
+  flex-wrap: nowrap;
+  margin-bottom: 0;
+}
+
+.content-search {
+  background: #161f32;
+  color: #fff;
+  border: 1px solid #2a3448;
+  border-radius: 9px;
+  padding: 11px 14px;
+  min-width: 220px;
+}
+
+.content-library-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.content-library-panel,
+.content-featured-panel,
+.content-history-panel {
+  background: #161f32;
+  border: 1px solid #2a3448;
+  border-radius: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.content-panel-heading {
+  margin-bottom: 18px;
+}
+
+.content-panel-heading h2 {
+  font-size: 17px;
+}
+
+.content-panel-heading p,
+.content-panel-heading > span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.content-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.content-library-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  background: #101827;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.content-library-item.selected {
+  border-color: #f2a93b;
+  background: #202b3e;
+}
+
+.content-library-thumbnail {
+  width: 88px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.content-thumbnail-placeholder {
+  display: grid;
+  place-items: center;
+  background: #26344b;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.content-library-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.content-library-info strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content-library-info span,
+.content-library-info small {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.content-library-rank {
+  color: #f2a93b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.content-analysis-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.content-featured-panel h2 {
+  font-size: 20px;
+}
+
+.content-featured-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.content-featured-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #101827;
+  padding: 14px;
+  border-radius: 9px;
+}
+
+.content-featured-metrics strong {
+  color: #fff;
+  font-size: 21px;
+}
+
+.content-featured-metrics span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.content-chart {
+  width: 100%;
+  overflow: hidden;
+}
+
+.content-chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.content-chart-gridline {
+  stroke: #2a3448;
+  stroke-width: 1;
+}
+
+.content-chart-line {
+  fill: none;
+  stroke: #5eead4;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.content-chart-point {
+  fill: #f2a93b;
+  stroke: #161f32;
+  stroke-width: 2;
+}
+
+.content-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.content-chart-note {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 18px;
+}
+
+.content-state {
+  color: #94a3b8;
+  padding: 20px 0;
+}
+
+@media (max-width: 900px) {
+  .content-library-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .content-workspace-heading,
+  .content-library-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .content-create-button,
+  .content-search {
+    width: 100%;
+  }
+
+  .content-filters {
+    overflow-x: auto;
+  }
+
+  .content-featured-metrics {
+    gap: 7px;
+  }
+
+  .content-featured-metrics div {
+    padding: 10px;
+  }
+
+  .content-featured-metrics strong {
+    font-size: 16px;
+  }
+
+  .content-library-thumbnail {
+    width: 72px;
+  }
+}
+
+/* ========================================
    8. DASHBOARD AUDIENCE SECTION
 ======================================== */
 
@@ -3170,4 +3475,166 @@ button:disabled {
 
 .popup_window.error {
   border-left: 4px solid #FDA4AF;
+}
+
+/* Shared primary action button styling */
+.content-create-button,
+.content-view-all,
+.platforms-section .platform-button,
+.platforms-section .platform-button.disconnect,
+.get-started-button,
+.nav-links .login-button,
+.footer-links button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 9px;
+  background: #f2a93b;
+  color: #101827;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.content-create-button:hover,
+.content-view-all:hover,
+.platforms-section .platform-button:hover,
+.platforms-section .platform-button.disconnect:hover,
+.get-started-button:hover,
+.nav-links .login-button:hover,
+.footer-links button:hover {
+  background: #ffc15c;
+  transform: translateY(-1px);
+}
+
+.content-create-button:focus-visible,
+.content-view-all:focus-visible,
+.platforms-section .platform-button:focus-visible,
+.get-started-button:focus-visible,
+.nav-links .login-button:focus-visible,
+.footer-links button:focus-visible {
+  outline: 2px solid #5eead4;
+  outline-offset: 3px;
+}
+
+.content-create-button:disabled,
+.content-view-all:disabled,
+.platforms-section .platform-button:disabled,
+.get-started-button:disabled,
+.nav-links .login-button:disabled,
+.footer-links button:disabled {
+  transform: none;
+}
+
+/* ================================
+   AFLIT PRIVACY POLICY
+================================ */
+
+.privacy-page {
+  min-height: 100vh;
+  width: 100%;
+  background: #0e1420;
+  color: #e5eaf3;
+}
+
+.privacy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 8%;
+  border-bottom: 1px solid #2a3448;
+}
+
+.privacy-header a,
+.privacy-content a {
+  color: #f2a93b;
+  text-decoration: none;
+}
+
+.privacy-header a:hover,
+.privacy-content a:hover {
+  text-decoration: underline;
+}
+
+.privacy-content {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 70px 24px;
+  line-height: 1.8;
+}
+
+.privacy-content h1 {
+  font-size: 42px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.privacy-content h2 {
+  color: #f2a93b;
+  font-size: 21px;
+  margin-top: 38px;
+  margin-bottom: 12px;
+}
+
+.privacy-content h3 {
+  color: #5eead4;
+  font-size: 16px;
+  margin-top: 22px;
+}
+
+.privacy-content p,
+.privacy-content li {
+  color: #aeb9ca;
+}
+
+.privacy-content li {
+  margin-bottom: 8px;
+}
+
+.privacy-eyebrow {
+  color: #5eead4 !important;
+  letter-spacing: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.privacy-updated {
+  font-size: 13px;
+  margin-bottom: 35px;
+  color: #8490a3 !important;
+}
+
+.privacy-footer {
+  text-align: center;
+  padding: 25px;
+  border-top: 1px solid #2a3448;
+  color: #8490a3;
+}
+
+.footer-links a,
+.footer-links button {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .privacy-header {
+    padding: 20px;
+  }
+
+  .privacy-content {
+    padding: 45px 20px;
+  }
+
+  .privacy-content h1 {
+    font-size: 32px;
+  }
+
+  .privacy-content h2 {
+    font-size: 19px;
+  }
 }

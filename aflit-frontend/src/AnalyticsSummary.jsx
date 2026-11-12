@@ -1,16 +1,17 @@
+
 import './App.css'
 
-function AnalyticsSummary({ data }) {
-  const totalViews = data.reduce(
+function AnalyticsSummary({ data = [] }) {
+  const totalGrowth = data.reduce(
     (total, item) => total + item.views,
     0
   )
 
-  const averageViews = data.length
-    ? Math.round(totalViews / data.length)
+  const averageGrowth = data.length
+    ? Math.round(totalGrowth / data.length)
     : 0
 
-  const bestDay = data.length
+  const bestPeriod = data.length
     ? data.reduce((best, item) =>
         item.views > best.views ? item : best
       )
@@ -19,22 +20,24 @@ function AnalyticsSummary({ data }) {
   return (
     <section className="analytics-summary">
       <div className="summary-card">
-        <p>Total Views</p>
-        <h2>{totalViews.toLocaleString()}</h2>
+        <p>Total Views Gained</p>
+        <h2>{totalGrowth.toLocaleString()}</h2>
+        <span>Across recorded sync periods</span>
       </div>
 
       <div className="summary-card">
-        <p>Daily Average</p>
-        <h2>{averageViews.toLocaleString()}</h2>
+        <p>Average Growth</p>
+        <h2>{averageGrowth.toLocaleString()}</h2>
+        <span>Average views gained per period</span>
       </div>
 
       <div className="summary-card">
-        <p>Best-Performing Day</p>
-        <h2>{bestDay ? bestDay.day : 'N/A'}</h2>
+        <p>Strongest Growth Period</p>
+        <h2>{bestPeriod ? bestPeriod.day : 'N/A'}</h2>
         <span>
-          {bestDay
-            ? `${bestDay.views.toLocaleString()} views`
-            : 'No data available'}
+          {bestPeriod
+            ? `${bestPeriod.views.toLocaleString()} views gained`
+            : 'No growth data available yet'}
         </span>
       </div>
     </section>

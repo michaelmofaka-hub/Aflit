@@ -13,6 +13,7 @@ from Routes.content_route import router as content_router
 from Routes.analytic_route import router as analytic_router
 from Routes.sync_job_route import router as sync_job_router
 from Routes.ai_insight_route import router as ai_insight_router
+from Routes.audience_route import router as audience_router
 
 from worker.sync_worker import sync_worker
 
@@ -92,6 +93,11 @@ app.include_router(
 )
 
 app.include_router(
+    audience_router,
+    prefix="/audience"
+)
+
+app.include_router(
     sync_job_router,
     prefix="/sync-jobs"
 )
@@ -100,6 +106,7 @@ app.include_router(
     ai_insight_router,
     prefix="/ai-insights"
 )
+
 
 @app.get("/")
 async def health():

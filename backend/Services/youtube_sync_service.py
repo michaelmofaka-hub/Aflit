@@ -10,6 +10,7 @@ from Services.youtube_services import (
 
 from Services.content_services import create_content
 from Services.analytic_services import create_analytics
+from Services.audience_services import create_audience_snapshot
 
 
 async def sync_youtube(
@@ -30,6 +31,18 @@ async def sync_youtube(
         channel["contentDetails"]
         ["relatedPlaylists"]
         ["uploads"]
+    )
+
+    # Save channel-level audience statistics.
+    statistics = channel["statistics"]
+
+    await create_audience_snapshot(
+        user_id=user_id,
+        platform_id=platform_id,
+        channel_id=channel["id"],
+        subscribers=int(statistics.get("subscriberCount", 0)),
+        total_views=int(statistics.get("viewCount", 0)),
+        video_count=int(statistics.get("videoCount", 0))
     )
 
     # 2. Initialise pagination and counters.

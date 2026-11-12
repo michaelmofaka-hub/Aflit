@@ -1,8 +1,11 @@
 
 import { useState, useEffect } from 'react'
+
 import Welcome from './Welcome.jsx'
 import MetricCard from './Metric.jsx'
 import AnalyticSection from './AnalyticsSection.jsx'
+import useAnalyticsData from './useAnalytics.jsx'
+import AnalyticsSummary from './AnalyticsSummary.jsx'
 import Sidebar from './Sidebar.jsx'
 import ContentPerformance from './ContentPerformance.jsx'
 import AudienceAnalytics from './AudienceAnalytics.jsx'
@@ -14,18 +17,42 @@ import MonetizationPage from './MonetizationPage.jsx'
 import AIInsightsPage from './AIInsightsPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
+import PrivacyPolicy from './PrivacyPolicy.jsx'
 import { apiRequest } from './api'
+
 import './App.css'
 
 function App() {
-  const [activeSection, setActiveSection] = useState(
-    localStorage.getItem('token') ? 'Dashboard' : 'Landing'
-  )
+  const [activeSection, setActiveSection] = useState(() => {
+    const path = window.location.pathname
+
+    if (path === '/privacy') {
+      return 'Privacy'
+    }
+
+    return localStorage.getItem('token')
+      ? 'Dashboard'
+      : 'Landing'
+  })
 
   const [overview, setOverview] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [youtubeConnected, setYoutubeConnected] = useState(false)
 
+  // Shared analytics data for Dashboard and Analytics.
+  const {
+    history,
+    dailyHistory,
+    loading: historyLoading,
+    error: historyError,
+    refreshHistory
+  } = useAnalyticsData(
+    activeSection !== 'Landing' &&
+    activeSection !== 'Auth' &&
+    activeSection !== 'Privacy'
+  )
+
+  // Dashboard metric data.
   const metrics = [
     {
       title: 'Views',
@@ -101,11 +128,50 @@ function App() {
     }
   }, [activeSection])
 
+  // Navigate to a public page.
+  function handlePublicNavigation(section, path) {
+    window.history.pushState({}, '', path)
+    setActiveSection(section)
+  }
+
+  // Handle browser back and forward navigation.
+  useEffect(() => {
+    function handlePopState() {
+      const path = window.location.pathname
+
+      if (path === '/privacy') {
+        setActiveSection('Privacy')
+      } else {
+        setActiveSection(
+          localStorage.getItem('token')
+            ? 'Dashboard'
+            : 'Landing'
+        )
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  // Log out the current user.
   function handleLogout() {
     localStorage.removeItem('token')
     setActiveSection('Landing')
     setOverview(null)
     setYoutubeConnected(false)
+    window.history.pushState({}, '', '/')
+  }
+
+  // Shared props for detailed analytics.
+  const analyticsProps = {
+    dailyHistory,
+    historyLoading,
+    historyError,
+    onHistoryRefresh: refreshHistory
   }
 
   function renderSection() {
@@ -121,6 +187,18 @@ function App() {
               setAuthMode('login')
               setActiveSection('Auth')
             }}
+            onPrivacy={() =>
+              handlePublicNavigation('Privacy', '/privacy')
+            }
+          />
+        )
+
+      case 'Privacy':
+        return (
+          <PrivacyPolicy
+            onBack={() =>
+              handlePublicNavigation('Landing', '/')
+            }
           />
         )
 
@@ -130,13 +208,15 @@ function App() {
             <Welcome />
 
             <MetricCard
-              platform={overview?.platform || 'youtube'}
+              platform="youtube"
               metrics={metrics}
             />
 
-            <AnalyticSection />
+            <AnalyticsSummary data={dailyHistory} />
 
-            <ContentPerformance />
+            <ContentPerformance
+              onViewAll={() => setActiveSection('Content')}
+            />
 
             <AudienceAnalytics />
 
@@ -145,9 +225,8 @@ function App() {
             <PlatformsSection />
           </>
         )
-
       case 'Analytics':
-        return <AnalyticSection />
+        return <AnalyticSection {...analyticsProps} />
 
       case 'Content':
         return <ContentPage />
@@ -190,7 +269,8 @@ function App() {
   return (
     <div className="app-layout">
       {activeSection !== 'Landing' &&
-        activeSection !== 'Auth' && (
+        activeSection !== 'Auth' &&
+        activeSection !== 'Privacy' && (
           <Sidebar
             activeSection={activeSection}
             onNavigate={setActiveSection}
@@ -202,7 +282,7 @@ function App() {
         {renderSection()}
 
         {youtubeConnected && (
-          <p>Youtube connected successfully</p>
+          <p>YouTube connected successfully</p>
         )}
       </main>
     </div>
