@@ -10,11 +10,11 @@ import Sidebar from './Sidebar.jsx'
 import ContentPerformance from './ContentPerformance.jsx'
 import AudienceAnalytics from './AudienceAnalytics.jsx'
 import AIInsights from './AiInsights.jsx'
+import AIAgentPage from './AIAgentPage.jsx'
 import PlatformsSection from './PlatformSection.jsx'
 import ContentPage from './ContentPage.jsx'
 import AudiencePage from './AudiencePage.jsx'
 import MonetizationPage from './MonetizationPage.jsx'
-import AIInsightsPage from './AIInsightsPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
 import PrivacyPolicy from './PrivacyPolicy.jsx'
@@ -238,7 +238,11 @@ function App() {
         return <MonetizationPage />
 
       case 'AI Insights':
-        return <AIInsightsPage />
+        return (
+        <>
+          <AIAgentPage />
+          </>
+        )
 
       case 'Platforms':
         return <PlatformsSection />

@@ -1,5 +1,7 @@
+
 import bcrypt
 import jwt
+import hashlib
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -8,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 from database.database import database
 from Config.settings import settings
 
+
+# PASSWORD SECURITY
 
 def hash_password(password: str) -> str:
     password_bytes = password.encode("utf-8")
@@ -24,6 +28,8 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return bcrypt.checkpw(password_bytes, stored)
 
 
+# ACCESS TOKEN
+
 def create_access_token(user_id: str) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
 
@@ -34,13 +40,11 @@ def create_access_token(user_id: str) -> str:
         "exp": expires_at
     }
 
-    token = jwt.encode(
+    return jwt.encode(
         payload,
         settings.jwt_secret,
         algorithm="HS256"
     )
-
-    return token
 
 
 def verify_access_token(token: str):
@@ -63,7 +67,113 @@ def verify_access_token(token: str):
         return None
 
 
-def create_user(username: str, email: str, password: str) -> dict:
+# REFRESH TOKEN
+
+def create_refresh_token(user_id: str) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+
+    payload = {
+        "user_id": user_id,
+        "token_type": "refresh",
+        "iss": settings.jwt_issuer,
+        "exp": expires_at
+    }
+
+    return jwt.encode(
+        payload,
+        settings.jwt_secret,
+        algorithm="HS256"
+    )
+
+
+def verify_refresh_token(token: str):
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=["HS256"]
+        )
+
+        if payload.get("token_type") != "refresh":
+            return None
+
+        if payload.get("iss") != settings.jwt_issuer:
+            return None
+
+        return payload
+
+    except jwt.PyJWTError:
+        return None
+
+
+# REFRESH TOKEN HASHING
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
+
+
+# REFRESH SESSION MANAGEMENT
+
+async def save_refresh_token(user_id: str, token: str):
+    collection = database["refresh_sessions"]
+
+    await collection.insert_one({
+        "user_id": user_id,
+        "token_hash": hash_refresh_token(token),
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
+        "revoked": False
+    })
+
+
+async def is_refresh_token_active(
+    user_id: str,
+    token: str
+) -> bool:
+    collection = database["refresh_sessions"]
+
+    session = await collection.find_one({
+        "user_id": user_id,
+        "token_hash": hash_refresh_token(token),
+        "revoked": False,
+        "expires_at": {
+            "$gt": datetime.now(timezone.utc)
+        }
+    })
+
+    return session is not None
+
+
+async def revoke_refresh_token(
+    user_id: str,
+    token: str
+):
+    collection = database["refresh_sessions"]
+
+    await collection.update_one(
+        {
+            "user_id": user_id,
+            "token_hash": hash_refresh_token(token),
+            "revoked": False
+        },
+        {
+            "$set": {
+                "revoked": True,
+                "revoked_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+
+# USER MANAGEMENT
+
+def create_user(
+    username: str,
+    email: str,
+    password: str
+) -> dict:
     hashed_password = hash_password(password)
 
     user = {
@@ -73,6 +183,7 @@ def create_user(username: str, email: str, password: str) -> dict:
     }
 
     return user
+
 
 async def update_user(user_id: str, updates: dict):
     collection = database["users"]
@@ -90,7 +201,8 @@ async def update_user(user_id: str, updates: dict):
     return await collection.find_one(
         {"_id": object_id}
     )
-  
+
+
 async def save_user(user: dict):
     collection = database["users"]
 
@@ -155,4 +267,3 @@ def ensure_ownership(
         return False
 
     return True
-  

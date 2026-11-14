@@ -8,6 +8,7 @@ python-dotenv
 bcrypt
 PyJWT
 httpx
+bson
 google-api-python-client
 google-auth
 google-auth-oauthlib

@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { apiRequest } from './api'
 import Popup from './Popup.jsx'
@@ -20,6 +21,7 @@ function AuthPage({
 
   async function handleSubmit(event) {
     event.preventDefault()
+
     setIsLoading(true)
     setMessage('')
 
@@ -67,10 +69,13 @@ function AuthPage({
       setTimeout(() => {
         onLoginSuccess()
       }, 1000)
+
     } catch (error) {
       setPopupType('error')
       setMessage(error.message || 'Something went wrong.')
+
       console.error('Authentication failed:', error)
+
     } finally {
       setIsLoading(false)
     }
@@ -109,6 +114,7 @@ function AuthPage({
           {isRegister && (
             <label className="auth-field">
               Username
+
               <input
                 type="text"
                 value={username}
@@ -124,6 +130,7 @@ function AuthPage({
 
           <label className="auth-field">
             Email
+
             <input
               type="email"
               value={email}
@@ -138,6 +145,7 @@ function AuthPage({
 
           <label className="auth-field">
             Password
+
             <input
               type="password"
               value={password}

@@ -1,18 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Response,
+    Cookie
+)
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pymongo.errors import DuplicateKeyError
 
 from Services.users import (
     create_user,
     save_user,
     get_user_by_email,
-    verify_password,
     get_user_by_id,
-    create_access_token,
     verify_access_token,
     ensure_ownership,
     authenticate_user,
-    update_user
+    update_user,
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
+    save_refresh_token,
+    is_refresh_token_active,
+    revoke_refresh_token
 )
 
 from Schema.users import (
@@ -23,16 +34,56 @@ from Schema.users import (
     UserUpdate
 )
 
+from Config.settings import settings
+
+
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/users/login"
-)
+bearer_scheme = HTTPBearer()
 
+REFRESH_COOKIE = "aflit_refresh"
+REFRESH_MAX_AGE = 7 * 24 * 60 * 60
+
+
+# --------------------------------------------------
+# REFRESH COOKIE MANAGEMENT
+# --------------------------------------------------
+
+def set_refresh_cookie(response: Response, token: str):
+    is_production = settings.environment.lower() == "production"
+
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=token,
+        httponly=True,
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+        max_age=REFRESH_MAX_AGE,
+        path="/users"
+    )
+
+
+def clear_refresh_cookie(response: Response):
+    is_production = settings.environment.lower() == "production"
+
+    response.delete_cookie(
+        key=REFRESH_COOKIE,
+        path="/users",
+        secure=is_production,
+        httponly=True,
+        samesite="none" if is_production else "lax"
+    )
+
+
+# --------------------------------------------------
+# AUTHENTICATION
+# --------------------------------------------------
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme)
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
+    token = credentials.credentials
+
     payload = verify_access_token(token)
 
     if payload is None:
@@ -41,15 +92,15 @@ async def get_current_user(
             detail="Invalid or expired token"
         )
 
-    if "user_id" not in payload:
+    user_id = payload.get("user_id")
+
+    if not user_id:
         raise HTTPException(
             status_code=401,
             detail="Invalid token"
         )
 
-    user = await get_user_by_id(
-        payload["user_id"]
-    )
+    user = await get_user_by_id(user_id)
 
     if user is None:
         raise HTTPException(
@@ -60,10 +111,11 @@ async def get_current_user(
     return user
 
 
-@router.get(
-    "/me",
-    response_model=UserResponse
-)
+# --------------------------------------------------
+# USER PROFILE
+# --------------------------------------------------
+
+@router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: dict = Depends(get_current_user)
 ):
@@ -74,37 +126,63 @@ async def get_me(
     }
 
 
-@router.get(
-    "/check-owner/{resource_user_id}"
-)
+@router.get("/check-owner/{resource_user_id}")
 async def check_owner(
     resource_user_id: str,
     current_user: dict = Depends(get_current_user)
 ):
     current_user_id = str(current_user["_id"])
 
-    if not ensure_ownership(
-        resource_user_id,
-        current_user_id
-    ):
+    if not ensure_ownership(resource_user_id, current_user_id):
         raise HTTPException(
             status_code=403,
             detail="You do not own this resource"
         )
 
+    return {"message": "Access allowed"}
+
+
+@router.get("/profile", response_model=UserResponse)
+async def get_profile(
+    current_user: dict = Depends(get_current_user)
+):
     return {
-        "message": "Access allowed"
+        "user_id": str(current_user["_id"]),
+        "username": current_user["username"],
+        "email": current_user["email"]
     }
 
 
-@router.post(
-    "/register",
-    response_model=UserResponse
-)
-async def register(user: User):
-    existing_user = await get_user_by_email(
-        user.email
+@router.patch("/profile", response_model=UserResponse)
+async def update_profile(
+    user_update: UserUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    updated_user = await update_user(
+        str(current_user["_id"]),
+        {"username": user_update.username}
     )
+
+    if updated_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "user_id": str(updated_user["_id"]),
+        "username": updated_user["username"],
+        "email": updated_user["email"]
+    }
+
+
+# --------------------------------------------------
+# REGISTRATION
+# --------------------------------------------------
+
+@router.post("/register", response_model=UserResponse)
+async def register(user: User):
+    existing_user = await get_user_by_email(user.email)
 
     if existing_user is not None:
         raise HTTPException(
@@ -134,11 +212,15 @@ async def register(user: User):
     }
 
 
-@router.post(
-    "/login",
-    response_model=TokenResponse
-)
-async def login(user: UserLogin):
+# --------------------------------------------------
+# LOGIN
+# --------------------------------------------------
+
+@router.post("/login", response_model=TokenResponse)
+async def login(
+    user: UserLogin,
+    response: Response
+):
     user_record = await authenticate_user(
         user.email,
         user.password
@@ -152,50 +234,133 @@ async def login(user: UserLogin):
 
     user_id = str(user_record["_id"])
 
-    token = create_access_token(
-        user_id
+    access_token = create_access_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+
+    await save_refresh_token(
+        user_id,
+        refresh_token
+    )
+
+    set_refresh_cookie(
+        response,
+        refresh_token
     )
 
     return {
-        "access_token": token
+        "access_token": access_token
     }
 
-@router.get(
-    "/profile",
-    response_model=UserResponse
-)
-async def get_profile(
-    current_user: dict = Depends(get_current_user)
-):
-    return {
-        "user_id": str(current_user["_id"]),
-        "username": current_user["username"],
-        "email": current_user["email"]
-    }
 
-@router.patch(
-    "/profile",
-    response_model=UserResponse
-)
-async def update_profile(
-    user_update: UserUpdate,
-    current_user: dict = Depends(get_current_user)
-):
-    updated_user = await update_user(
-        str(current_user["_id"]),
-        {
-            "username": user_update.username
-        }
+# --------------------------------------------------
+# REFRESH SESSION
+# --------------------------------------------------
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_session(
+    response: Response,
+    refresh_token: str | None = Cookie(
+        default=None,
+        alias=REFRESH_COOKIE
     )
-
-    if updated_user is None:
+):
+    if not refresh_token:
         raise HTTPException(
-            status_code=404,
-            detail="User not found"
+            status_code=401,
+            detail="Refresh session missing"
         )
 
+    payload = verify_refresh_token(refresh_token)
+
+    if payload is None:
+        clear_refresh_cookie(response)
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh session"
+        )
+
+    user_id = payload.get("user_id")
+
+    if not user_id:
+        clear_refresh_cookie(response)
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh session"
+        )
+
+    active = await is_refresh_token_active(
+        user_id,
+        refresh_token
+    )
+
+    if not active:
+        clear_refresh_cookie(response)
+
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh session revoked or expired"
+        )
+
+    user = await get_user_by_id(user_id)
+
+    if user is None:
+        await revoke_refresh_token(user_id, refresh_token)
+        clear_refresh_cookie(response)
+
+        raise HTTPException(
+            status_code=401,
+            detail="User no longer exists"
+        )
+
+    # Rotate the refresh token.
+    await revoke_refresh_token(
+        user_id,
+        refresh_token
+    )
+
+    new_refresh_token = create_refresh_token(user_id)
+    new_access_token = create_access_token(user_id)
+
+    await save_refresh_token(
+        user_id,
+        new_refresh_token
+    )
+
+    set_refresh_cookie(
+        response,
+        new_refresh_token
+    )
+
     return {
-        "user_id": str(updated_user["_id"]),
-        "username": updated_user["username"],
-        "email": updated_user["email"]
+        "access_token": new_access_token
+    }
+
+
+# --------------------------------------------------
+# LOGOUT
+# --------------------------------------------------
+
+@router.post("/logout")
+async def logout(
+    response: Response,
+    refresh_token: str | None = Cookie(
+        default=None,
+        alias=REFRESH_COOKIE
+    )
+):
+    if refresh_token:
+        payload = verify_refresh_token(refresh_token)
+
+        if payload and payload.get("user_id"):
+            await revoke_refresh_token(
+                payload["user_id"],
+                refresh_token
+            )
+
+    clear_refresh_cookie(response)
+
+    return {
+        "message": "Logged out successfully"
     }

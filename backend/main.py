@@ -12,8 +12,8 @@ from Routes.platform_route import router as platform_router
 from Routes.content_route import router as content_router
 from Routes.analytic_route import router as analytic_router
 from Routes.sync_job_route import router as sync_job_router
-from Routes.ai_insight_route import router as ai_insight_router
 from Routes.audience_route import router as audience_router
+from Routes.ai_agent_route import router as ai_agent_router
 
 from worker.sync_worker import sync_worker
 
@@ -103,8 +103,7 @@ app.include_router(
 )
 
 app.include_router(
-    ai_insight_router,
-    prefix="/ai-insights"
+    ai_agent_router,
 )
 
 
