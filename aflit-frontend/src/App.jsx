@@ -17,29 +17,162 @@ import AudiencePage from './AudiencePage.jsx'
 import MonetizationPage from './MonetizationPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
+import ForgotPassword from './forgotPassword.jsx'
 import PrivacyPolicy from './PrivacyPolicy.jsx'
+import SettingsPage from './SettingsPage.jsx'
+
 import { apiRequest } from './api'
 
 import './App.css'
 
+
 function App() {
+
+  // 1. INITIAL APPLICATION STATE
+
   const [activeSection, setActiveSection] = useState(() => {
     const path = window.location.pathname
 
-    if (path === '/privacy') {
-      return 'Privacy'
-    }
+    if (path === '/privacy') return 'Privacy'
+    if (path === '/forgot-password') return 'ForgotPassword'
 
-    return localStorage.getItem('token')
-      ? 'Dashboard'
-      : 'Landing'
+    return 'Landing'
   })
 
   const [overview, setOverview] = useState(null)
+
   const [authMode, setAuthMode] = useState('login')
+
   const [youtubeConnected, setYoutubeConnected] = useState(false)
 
-  // Shared analytics data for Dashboard and Analytics.
+  // Authentication states:
+  // checking, authenticated, unauthenticated, error.
+
+  const [authStatus, setAuthStatus] = useState('checking')
+
+  const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
+
+
+  // 2. DETERMINE WHETHER AN ERROR MEANS UNAUTHORIZED ACCESS
+
+  function isUnauthorized(error) {
+    const status = error.status || error.statusCode
+
+    if (status === 401) {
+      return true
+    }
+
+    const message = error.message || ''
+
+    return (
+      /401|unauthorized|could not validate credentials|token.*(expired|invalid)/i
+        .test(message)
+    )
+  }
+
+
+  // 3. INITIAL AUTHENTICATION CHECK
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function checkAuthentication() {
+
+      const token = localStorage.getItem('token')
+
+      // No token means the user is not authenticated.
+
+      if (!token) {
+        setAuthStatus('unauthenticated')
+
+        setActiveSection(current =>
+          current === 'Privacy' || current === 'ForgotPassword'
+            ? current
+            : 'Landing'
+        )
+
+        return
+      }
+
+      setAuthStatus('checking')
+
+      try {
+
+        // Verify the JWT using the existing FastAPI endpoint.
+
+        await apiRequest('/users/me', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        if (cancelled) return
+
+        // Backend successfully verified the user.
+
+        setAuthStatus('authenticated')
+
+        if (
+          window.location.pathname !== '/privacy' &&
+          window.location.pathname !== '/forgot-password'
+        ) {
+          setActiveSection('Dashboard')
+        }
+
+      } catch (error) {
+
+        if (cancelled) return
+
+        console.error(
+          'Authentication verification failed:',
+          error
+        )
+
+        if (isUnauthorized(error)) {
+
+          // Expired or invalid JWT.
+
+          localStorage.removeItem('token')
+
+          setAuthStatus('unauthenticated')
+
+          setActiveSection(current =>
+            current === 'Privacy' || current === 'ForgotPassword'
+              ? current
+              : 'Landing'
+          )
+
+        } else {
+
+          // Network/server failure.
+          // Do not destroy a potentially valid token.
+
+          setAuthStatus('error')
+
+        }
+
+      }
+    }
+
+    checkAuthentication()
+
+    return () => {
+      cancelled = true
+    }
+
+  }, [authCheckAttempt])
+
+
+  // 4. RETRY AUTHENTICATION VERIFICATION
+
+  function handleRetryAuthentication() {
+    setAuthCheckAttempt(previous => previous + 1)
+  }
+
+
+  // 5. SHARED ANALYTICS DATA
+
   const {
     history,
     dailyHistory,
@@ -47,12 +180,16 @@ function App() {
     error: historyError,
     refreshHistory
   } = useAnalyticsData(
+    authStatus === 'authenticated' &&
     activeSection !== 'Landing' &&
     activeSection !== 'Auth' &&
-    activeSection !== 'Privacy'
+    activeSection !== 'Privacy' &&
+    activeSection !== 'ForgotPassword'
   )
 
-  // Dashboard metric data.
+
+  // 6. DASHBOARD METRICS
+
   const metrics = [
     {
       title: 'Views',
@@ -72,11 +209,17 @@ function App() {
     }
   ]
 
-  // Detect successful YouTube connection.
+
+  // 7. YOUTUBE CONNECTION DETECTION
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+
+    const params = new URLSearchParams(
+      window.location.search
+    )
 
     if (params.get('youtube_connected') === '1') {
+
       setYoutubeConnected(true)
 
       window.history.replaceState(
@@ -84,20 +227,33 @@ function App() {
         '',
         window.location.pathname
       )
+
     }
+
   }, [])
 
-  // Fetch live YouTube channel overview.
+
+  // 8. FETCH YOUTUBE OVERVIEW
+
   useEffect(() => {
-    if (activeSection !== 'Dashboard') return
+
+    if (
+      authStatus !== 'authenticated' ||
+      activeSection !== 'Dashboard'
+    ) {
+      return
+    }
 
     const token = localStorage.getItem('token')
+
     if (!token) return
 
     let cancelled = false
 
     async function loadOverview() {
+
       try {
+
         const data = await apiRequest(
           '/analytics/youtube/overview',
           {
@@ -108,17 +264,30 @@ function App() {
         )
 
         if (!cancelled) {
+
           setOverview({
             ...data,
             platform: 'youtube'
           })
+
         }
+
       } catch (error) {
+
         console.error(
           'Could not load platform overview:',
           error
         )
+
+        if (!cancelled && isUnauthorized(error)) {
+          localStorage.removeItem('token')
+          setOverview(null)
+          setAuthStatus('unauthenticated')
+          setActiveSection('Landing')
+        }
+
       }
+
     }
 
     loadOverview()
@@ -126,47 +295,117 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [activeSection])
 
-  // Navigate to a public page.
+  }, [activeSection, authStatus])
+
+
+  // 9. PUBLIC NAVIGATION
+
   function handlePublicNavigation(section, path) {
+
     window.history.pushState({}, '', path)
+
     setActiveSection(section)
+
   }
 
-  // Handle browser back and forward navigation.
+
+  // 10. FORGOT PASSWORD NAVIGATION
+
+  function handleForgotPassword() {
+
+    window.history.pushState(
+      {},
+      '',
+      '/forgot-password'
+    )
+
+    setAuthMode('login')
+
+    setActiveSection('ForgotPassword')
+
+  }
+
+
+  function handleBackToLogin() {
+
+    window.history.pushState(
+      {},
+      '',
+      '/'
+    )
+
+    setAuthMode('login')
+
+    setActiveSection('Auth')
+
+  }
+
+
+  // 11. BROWSER BACK AND FORWARD
+
   useEffect(() => {
+
     function handlePopState() {
+
       const path = window.location.pathname
 
       if (path === '/privacy') {
+
         setActiveSection('Privacy')
+
+      } else if (path === '/forgot-password') {
+
+        setActiveSection('ForgotPassword')
+
+      } else if (authStatus === 'authenticated') {
+
+        setActiveSection('Dashboard')
+
       } else {
-        setActiveSection(
-          localStorage.getItem('token')
-            ? 'Dashboard'
-            : 'Landing'
-        )
+
+        setActiveSection('Landing')
+
       }
+
     }
 
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener(
+      'popstate',
+      handlePopState
+    )
 
     return () => {
-      window.removeEventListener('popstate', handlePopState)
+      window.removeEventListener(
+        'popstate',
+        handlePopState
+      )
     }
-  }, [])
 
-  // Log out the current user.
+  }, [authStatus])
+
+
+  // 12. LOGOUT
+
   function handleLogout() {
+
     localStorage.removeItem('token')
+
+    setAuthStatus('unauthenticated')
+
     setActiveSection('Landing')
+
     setOverview(null)
+
     setYoutubeConnected(false)
+
     window.history.pushState({}, '', '/')
+
   }
 
-  // Shared props for detailed analytics.
+
+  // 13. ANALYTICS PROPS
+
   const analyticsProps = {
     dailyHistory,
     historyLoading,
@@ -174,26 +413,38 @@ function App() {
     onHistoryRefresh: refreshHistory
   }
 
+
+  // 14. RENDER APPLICATION SECTIONS
+
   function renderSection() {
+
     switch (activeSection) {
+
       case 'Landing':
+
         return (
           <LandingPage
+
             onGetStarted={() => {
               setAuthMode('register')
               setActiveSection('Auth')
             }}
+
             onLogin={() => {
               setAuthMode('login')
               setActiveSection('Auth')
             }}
+
             onPrivacy={() =>
               handlePublicNavigation('Privacy', '/privacy')
             }
+
           />
         )
 
+
       case 'Privacy':
+
         return (
           <PrivacyPolicy
             onBack={() =>
@@ -202,7 +453,46 @@ function App() {
           />
         )
 
+
+      case 'Auth':
+
+        return (
+          <AuthPage
+
+            mode={authMode}
+
+            onSwitchMode={() => {
+              setAuthMode(currentMode =>
+                currentMode === 'register'
+                  ? 'login'
+                  : 'register'
+              )
+            }}
+
+            onBack={() => setActiveSection('Landing')}
+
+            onForgotPassword={handleForgotPassword}
+
+            onLoginSuccess={() => {
+              setAuthStatus('authenticated')
+              setActiveSection('Dashboard')
+            }}
+
+          />
+        )
+
+
+      case 'ForgotPassword':
+
+        return (
+          <ForgotPassword
+            onBack={handleBackToLogin}
+          />
+        )
+
+
       case 'Dashboard':
+
         return (
           <>
             <Welcome />
@@ -212,10 +502,14 @@ function App() {
               metrics={metrics}
             />
 
-            <AnalyticsSummary data={dailyHistory} />
+            <AnalyticsSummary
+              data={dailyHistory}
+            />
 
             <ContentPerformance
-              onViewAll={() => setActiveSection('Content')}
+              onViewAll={() =>
+                setActiveSection('Content')
+              }
             />
 
             <AudienceAnalytics />
@@ -223,74 +517,164 @@ function App() {
             <AIInsights />
 
             <PlatformsSection />
+
           </>
         )
+
+
       case 'Analytics':
-        return <AnalyticSection {...analyticsProps} />
+
+        return (
+          <AnalyticSection {...analyticsProps} />
+        )
+
 
       case 'Content':
+
         return <ContentPage />
 
+
       case 'Audience':
+
         return <AudiencePage />
 
+
       case 'Monetization':
+
         return <MonetizationPage />
 
+
       case 'AI Insights':
-        return (
-        <>
-          <AIAgentPage />
-          </>
-        )
+
+        return <AIAgentPage />
+
 
       case 'Platforms':
+
         return <PlatformsSection />
 
-      case 'Auth':
-        return (
-          <AuthPage
-            mode={authMode}
-            onSwitchMode={() => {
-              setAuthMode((currentMode) =>
-                currentMode === 'register'
-                  ? 'login'
-                  : 'register'
-              )
-            }}
-            onBack={() => setActiveSection('Landing')}
-            onLoginSuccess={() =>
-              setActiveSection('Dashboard')
-            }
-          />
-        )
+
+      case 'Settings':
+
+        return <SettingsPage />
+
 
       default:
+
         return <Welcome />
+
     }
+
   }
 
+
+  // 15. AUTHENTICATION LOADING SCREEN
+
+  if (
+    authStatus === 'checking' &&
+    activeSection !== 'Privacy' &&
+    activeSection !== 'ForgotPassword'
+  ) {
+
+    return (
+      <div className="app-auth-loading">
+
+        <div className="auth-loading-card">
+
+          <h2>
+            Aflit<span>.</span>
+          </h2>
+
+          <p>
+            Verifying your account...
+          </p>
+
+          <div className="auth-loader"></div>
+
+        </div>
+
+      </div>
+    )
+
+  }
+
+
+  // 16. BACKEND CONNECTION ERROR
+
+  if (
+    authStatus === 'error' &&
+    activeSection !== 'Privacy' &&
+    activeSection !== 'ForgotPassword'
+  ) {
+
+    return (
+      <div className="app-auth-loading">
+
+        <div className="auth-loading-card">
+
+          <h2>
+            Aflit<span>.</span>
+          </h2>
+
+          <h3>
+            Unable to verify your account
+          </h3>
+
+          <p>
+            We couldn't connect to the authentication
+            service. Your session has not been deleted.
+            Please try again.
+          </p>
+
+          <button
+            className="get-started-button"
+            onClick={handleRetryAuthentication}
+          >
+            Try again
+          </button>
+
+        </div>
+
+      </div>
+    )
+
+  }
+
+
+  // 17. APPLICATION LAYOUT
+
   return (
+
     <div className="app-layout">
-      {activeSection !== 'Landing' &&
+
+      {authStatus === 'authenticated' &&
+        activeSection !== 'Privacy' &&
+        activeSection !== 'Landing' &&
         activeSection !== 'Auth' &&
-        activeSection !== 'Privacy' && (
+        activeSection !== 'ForgotPassword' && (
+
           <Sidebar
+
             activeSection={activeSection}
+
             onNavigate={setActiveSection}
+
             onLogout={handleLogout}
+
           />
+
         )}
 
       <main className="main-content">
+
         {renderSection()}
 
-        {youtubeConnected && (
-          <p>YouTube connected successfully</p>
-        )}
       </main>
+
     </div>
+
   )
+
 }
 
 export default App
