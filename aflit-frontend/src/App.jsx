@@ -17,7 +17,7 @@ import AudiencePage from './AudiencePage.jsx'
 import MonetizationPage from './MonetizationPage.jsx'
 import LandingPage from './Landing.jsx'
 import AuthPage from './AuthPage.jsx'
-import ForgotPassword from './forgotPassword.jsx'
+import ForgotPassword from './ForgotPassword.jsx'
 import PrivacyPolicy from './PrivacyPolicy.jsx'
 import SettingsPage from './SettingsPage.jsx'
 
