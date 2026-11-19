@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'aflit-frontend/**'
+      - '.github/workflows/**'
 
 jobs:
   build:
@@ -20,6 +23,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: aflit-frontend/package-lock.json
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -41,17 +45,17 @@ jobs:
 
       - name: Build debug APK
         run: |
-          chmod +x aflit-frontend/android/gradlew
-          cd aflit-frontend/android
+          chmod +x gradlew
           ./gradlew \
             -PappVersionCode=${{ github.run_number }} \
             -PappVersionName=1.0.${{ github.run_number }} \
             assembleDebug
+        working-directory: aflit-frontend/android
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Aflit-APK
+          name: Aflit-APK-${{ github.run_number }}
           path: aflit-frontend/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14

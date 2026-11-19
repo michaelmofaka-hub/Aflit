@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 
 import Welcome from './Welcome.jsx'
@@ -27,7 +26,6 @@ import './App.css'
 
 
 function App() {
-
   // 1. INITIAL APPLICATION STATE
 
   const [activeSection, setActiveSection] = useState(() => {
@@ -40,34 +38,27 @@ function App() {
   })
 
   const [overview, setOverview] = useState(null)
-
   const [authMode, setAuthMode] = useState('login')
-
   const [youtubeConnected, setYoutubeConnected] = useState(false)
 
-  // Authentication states:
-  // checking, authenticated, unauthenticated, error.
-
+  // Authentication is checked silently in the background.
+  // This state does not control or render a checker window.
   const [authStatus, setAuthStatus] = useState('checking')
-
-  const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
 
 
   // 2. DETERMINE WHETHER AN ERROR MEANS UNAUTHORIZED ACCESS
 
   function isUnauthorized(error) {
-    const status = error.status || error.statusCode
+    const status = error?.status || error?.statusCode
 
     if (status === 401) {
       return true
     }
 
-    const message = error.message || ''
+    const message = error?.message || ''
 
-    return (
-      /401|unauthorized|could not validate credentials|token.*(expired|invalid)/i
-        .test(message)
-    )
+    return /401|unauthorized|could not validate credentials|token.*(expired|invalid)/i
+      .test(message)
   }
 
 
@@ -77,12 +68,13 @@ function App() {
     let cancelled = false
 
     async function checkAuthentication() {
-
       const token = localStorage.getItem('token')
 
       // No token means the user is not authenticated.
 
       if (!token) {
+        if (cancelled) return
+
         setAuthStatus('unauthenticated')
 
         setActiveSection(current =>
@@ -94,11 +86,9 @@ function App() {
         return
       }
 
-      setAuthStatus('checking')
-
       try {
-
         // Verify the JWT using the existing FastAPI endpoint.
+        // api.js handles access-token renewal when necessary.
 
         await apiRequest('/users/me', {
           method: 'GET',
@@ -108,8 +98,6 @@ function App() {
         })
 
         if (cancelled) return
-
-        // Backend successfully verified the user.
 
         setAuthStatus('authenticated')
 
@@ -121,7 +109,6 @@ function App() {
         }
 
       } catch (error) {
-
         if (cancelled) return
 
         console.error(
@@ -129,10 +116,14 @@ function App() {
           error
         )
 
-        if (isUnauthorized(error)) {
+        // api.js removes the token if refresh returns 401.
+        // If the token remains, treat the failure as temporary
+        // and preserve the user's session.
 
-          // Expired or invalid JWT.
-
+        if (
+          !localStorage.getItem('token') ||
+          isUnauthorized(error)
+        ) {
           localStorage.removeItem('token')
 
           setAuthStatus('unauthenticated')
@@ -144,14 +135,11 @@ function App() {
           )
 
         } else {
-
-          // Network/server failure.
-          // Do not destroy a potentially valid token.
+          // No checker window and no retry window are rendered.
+          // The potentially valid token is preserved.
 
           setAuthStatus('error')
-
         }
-
       }
     }
 
@@ -160,21 +148,12 @@ function App() {
     return () => {
       cancelled = true
     }
-
-  }, [authCheckAttempt])
-
-
-  // 4. RETRY AUTHENTICATION VERIFICATION
-
-  function handleRetryAuthentication() {
-    setAuthCheckAttempt(previous => previous + 1)
-  }
+  }, [])
 
 
-  // 5. SHARED ANALYTICS DATA
+  // 4. SHARED ANALYTICS DATA
 
   const {
-    history,
     dailyHistory,
     loading: historyLoading,
     error: historyError,
@@ -188,7 +167,7 @@ function App() {
   )
 
 
-  // 6. DASHBOARD METRICS
+  // 5. DASHBOARD METRICS
 
   const metrics = [
     {
@@ -210,16 +189,14 @@ function App() {
   ]
 
 
-  // 7. YOUTUBE CONNECTION DETECTION
+  // 6. YOUTUBE CONNECTION DETECTION
 
   useEffect(() => {
-
     const params = new URLSearchParams(
       window.location.search
     )
 
     if (params.get('youtube_connected') === '1') {
-
       setYoutubeConnected(true)
 
       window.history.replaceState(
@@ -227,16 +204,13 @@ function App() {
         '',
         window.location.pathname
       )
-
     }
-
   }, [])
 
 
-  // 8. FETCH YOUTUBE OVERVIEW
+  // 7. FETCH YOUTUBE OVERVIEW
 
   useEffect(() => {
-
     if (
       authStatus !== 'authenticated' ||
       activeSection !== 'Dashboard'
@@ -251,9 +225,7 @@ function App() {
     let cancelled = false
 
     async function loadOverview() {
-
       try {
-
         const data = await apiRequest(
           '/analytics/youtube/overview',
           {
@@ -264,30 +236,31 @@ function App() {
         )
 
         if (!cancelled) {
-
           setOverview({
             ...data,
             platform: 'youtube'
           })
-
         }
 
       } catch (error) {
-
         console.error(
           'Could not load platform overview:',
           error
         )
 
-        if (!cancelled && isUnauthorized(error)) {
+        if (
+          !cancelled &&
+          (
+            !localStorage.getItem('token') ||
+            isUnauthorized(error)
+          )
+        ) {
           localStorage.removeItem('token')
           setOverview(null)
           setAuthStatus('unauthenticated')
           setActiveSection('Landing')
         }
-
       }
-
     }
 
     loadOverview()
@@ -295,25 +268,20 @@ function App() {
     return () => {
       cancelled = true
     }
-
   }, [activeSection, authStatus])
 
 
-  // 9. PUBLIC NAVIGATION
+  // 8. PUBLIC NAVIGATION
 
   function handlePublicNavigation(section, path) {
-
     window.history.pushState({}, '', path)
-
     setActiveSection(section)
-
   }
 
 
-  // 10. FORGOT PASSWORD NAVIGATION
+  // 9. FORGOT PASSWORD NAVIGATION
 
   function handleForgotPassword() {
-
     window.history.pushState(
       {},
       '',
@@ -321,14 +289,11 @@ function App() {
     )
 
     setAuthMode('login')
-
     setActiveSection('ForgotPassword')
-
   }
 
 
   function handleBackToLogin() {
-
     window.history.pushState(
       {},
       '',
@@ -336,38 +301,28 @@ function App() {
     )
 
     setAuthMode('login')
-
     setActiveSection('Auth')
-
   }
 
 
-  // 11. BROWSER BACK AND FORWARD
+  // 10. BROWSER BACK AND FORWARD
 
   useEffect(() => {
-
     function handlePopState() {
-
       const path = window.location.pathname
 
       if (path === '/privacy') {
-
         setActiveSection('Privacy')
 
       } else if (path === '/forgot-password') {
-
         setActiveSection('ForgotPassword')
 
       } else if (authStatus === 'authenticated') {
-
         setActiveSection('Dashboard')
 
       } else {
-
         setActiveSection('Landing')
-
       }
-
     }
 
     window.addEventListener(
@@ -381,30 +336,24 @@ function App() {
         handlePopState
       )
     }
-
   }, [authStatus])
 
 
-  // 12. LOGOUT
+  // 11. LOGOUT
 
   function handleLogout() {
-
     localStorage.removeItem('token')
 
     setAuthStatus('unauthenticated')
-
     setActiveSection('Landing')
-
     setOverview(null)
-
     setYoutubeConnected(false)
 
     window.history.pushState({}, '', '/')
-
   }
 
 
-  // 13. ANALYTICS PROPS
+  // 12. ANALYTICS PROPS
 
   const analyticsProps = {
     dailyHistory,
@@ -414,17 +363,13 @@ function App() {
   }
 
 
-  // 14. RENDER APPLICATION SECTIONS
+  // 13. RENDER APPLICATION SECTIONS
 
   function renderSection() {
-
     switch (activeSection) {
-
       case 'Landing':
-
         return (
           <LandingPage
-
             onGetStarted={() => {
               setAuthMode('register')
               setActiveSection('Auth')
@@ -438,13 +383,11 @@ function App() {
             onPrivacy={() =>
               handlePublicNavigation('Privacy', '/privacy')
             }
-
           />
         )
 
 
       case 'Privacy':
-
         return (
           <PrivacyPolicy
             onBack={() =>
@@ -455,10 +398,8 @@ function App() {
 
 
       case 'Auth':
-
         return (
           <AuthPage
-
             mode={authMode}
 
             onSwitchMode={() => {
@@ -477,13 +418,11 @@ function App() {
               setAuthStatus('authenticated')
               setActiveSection('Dashboard')
             }}
-
           />
         )
 
 
       case 'ForgotPassword':
-
         return (
           <ForgotPassword
             onBack={handleBackToLogin}
@@ -492,7 +431,6 @@ function App() {
 
 
       case 'Dashboard':
-
         return (
           <>
             <Welcome />
@@ -517,134 +455,51 @@ function App() {
             <AIInsights />
 
             <PlatformsSection />
-
           </>
         )
 
 
       case 'Analytics':
-
         return (
           <AnalyticSection {...analyticsProps} />
         )
 
 
       case 'Content':
-
         return <ContentPage />
 
 
       case 'Audience':
-
         return <AudiencePage />
 
 
       case 'Monetization':
-
         return <MonetizationPage />
 
 
       case 'AI Insights':
-
         return <AIAgentPage />
 
 
       case 'Platforms':
-
         return <PlatformsSection />
 
 
       case 'Settings':
-
         return <SettingsPage />
 
 
       default:
-
         return <Welcome />
-
     }
-
   }
 
 
-  // 15. AUTHENTICATION LOADING SCREEN
-
-  if (
-    authStatus === 'checking' &&
-    activeSection !== 'Privacy' &&
-    activeSection !== 'ForgotPassword'
-  ) {
-
-    return (
-      <div className="app-auth-loading">
-
-        <div className="auth-loading-card">
-
-          <h2>
-            Aflit<span>.</span>
-          </h2>
-
-          <p>
-            Verifying your account...
-          </p>
-
-          <div className="auth-loader"></div>
-
-        </div>
-
-      </div>
-    )
-
-  }
-
-
-  // 16. BACKEND CONNECTION ERROR
-
-  if (
-    authStatus === 'error' &&
-    activeSection !== 'Privacy' &&
-    activeSection !== 'ForgotPassword'
-  ) {
-
-    return (
-      <div className="app-auth-loading">
-
-        <div className="auth-loading-card">
-
-          <h2>
-            Aflit<span>.</span>
-          </h2>
-
-          <h3>
-            Unable to verify your account
-          </h3>
-
-          <p>
-            We couldn't connect to the authentication
-            service. Your session has not been deleted.
-            Please try again.
-          </p>
-
-          <button
-            className="get-started-button"
-            onClick={handleRetryAuthentication}
-          >
-            Try again
-          </button>
-
-        </div>
-
-      </div>
-    )
-
-  }
-
-
-  // 17. APPLICATION LAYOUT
+  // 14. APPLICATION LAYOUT
+  // There are deliberately no authentication checker,
+  // loading, backend-error, or retry windows in this component.
 
   return (
-
     <div className="app-layout">
 
       {authStatus === 'authenticated' &&
@@ -654,27 +509,18 @@ function App() {
         activeSection !== 'ForgotPassword' && (
 
           <Sidebar
-
             activeSection={activeSection}
-
             onNavigate={setActiveSection}
-
             onLogout={handleLogout}
-
           />
-
         )}
 
       <main className="main-content">
-
         {renderSection()}
-
       </main>
 
     </div>
-
   )
-
 }
 
 export default App
