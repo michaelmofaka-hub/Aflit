@@ -1,0 +1,77 @@
+
+name: Build Aflit Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aflit-frontend/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: aflit-frontend/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: aflit-frontend
+
+      - name: Build React frontend
+        run: npm run build
+        working-directory: aflit-frontend
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+        working-directory: aflit-frontend
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew \
+            -PappVersionCode=${{ github.run_number }} \
+            -PappVersionName=1.0.${{ github.run_number }} \
+            assembleDebug
+        working-directory: aflit-frontend/android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aflit-APK-${{ github.run_number }}
+          path: aflit-frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="v1.0.${{ github.run_number }}"
+          gh release create "$VERSION" \
+            aflit-frontend/android/app/build/outputs/apk/debug/app-debug.apk \
+            --target "$GITHUB_SHA" \
+            --title "Aflit $VERSION" \
+            --generate-notes \
+            --prerelease
