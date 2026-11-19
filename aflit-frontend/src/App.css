@@ -1238,9 +1238,33 @@ button:disabled {
   font-size: 18px;
 }
 
+.content-performance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.content-performance-heading > div {
+  min-width: 0;
+}
+
+.section-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .section-description {
-  margin: 8px 0 20px;
+  margin: 8px 0 0;
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .content-list {
@@ -3297,6 +3321,26 @@ button:disabled {
   .content-performance,
   .audience-section {
     padding: 16px;
+  }
+
+  .content-performance-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .content-performance-heading h2 {
+    font-size: 16px;
+  }
+
+  .content-performance-heading .section-description {
+    font-size: 12px;
+  }
+
+  .content-view-all {
+    flex-shrink: 0;
+    padding: 10px 12px;
+    font-size: 12px;
   }
 
   .analytics-history {

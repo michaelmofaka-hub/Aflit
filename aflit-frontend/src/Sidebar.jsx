@@ -21,10 +21,10 @@ function Sidebar({ activeSection, onNavigate, onLogout }) {
     'Analytics',
     'Content',
     'Audience',
-    'Monetization',
+    // 'Monetization',
     'AI Insights',
     'Platforms',
-    'Settings'
+    // 'Settings'
   ]
 
   // Icon assigned to each navigation item
