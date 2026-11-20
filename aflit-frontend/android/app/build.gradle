@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+def appVersionCode = project.providers.gradleProperty('appVersionCode').getOrElse('1').toInteger()
+def appVersionName = project.providers.gradleProperty('appVersionName').getOrElse('1.0')
+
 android {
     namespace = "com.Aflit.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +10,8 @@ android {
         applicationId "com.Aflit.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (findProperty('appVersionCode') ?: '1').toInteger()
-        versionName findProperty('appVersionName') ?: "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
