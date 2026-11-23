@@ -1,8 +1,12 @@
 
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGoogle } from '@fortawesome/free-brands-svg-icons'
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { GoogleLogin } from '@react-oauth/google'
+import {
+  faEye,
+  faEyeSlash,
+  faArrowLeft
+} from '@fortawesome/free-solid-svg-icons'
 
 import { apiRequest } from './api'
 import Popup from './Popup.jsx'
@@ -18,34 +22,49 @@ function AuthPage({
   onForgotPassword,
   onGoogleLogin
 }) {
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
+
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   const [message, setMessage] = useState('')
   const [popupType, setPopupType] = useState('success')
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-
   const isRegister = mode === 'register'
+
+  function showMessage(type, text) {
+    setPopupType(type)
+    setMessage(text)
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
 
-    if (isLoading) return
+    if (isLoading || isGoogleLoading) return
 
     setMessage('')
 
-    if (isRegister && !username.trim()) {
-      setPopupType('error')
-      setMessage('Please enter your username.')
+    const cleanEmail = email.trim()
+    const cleanUsername = username.trim()
+
+    if (isRegister && !cleanUsername) {
+      showMessage('error', 'Please enter your username.')
       return
     }
 
-    if (!password.trim() || password.length < 8) {
-      setPopupType('error')
-      setMessage('Password must contain at least 8 characters.')
+    if (!cleanEmail) {
+      showMessage('error', 'Please enter your email address.')
+      return
+    }
+
+    if (password.length < 8) {
+      showMessage(
+        'error',
+        'Your password must contain at least 8 characters.'
+      )
       return
     }
 
@@ -58,12 +77,12 @@ function AuthPage({
 
       const body = isRegister
         ? {
-            username: username.trim(),
-            email: email.trim(),
+            username: cleanUsername,
+            email: cleanEmail,
             password
           }
         : {
-            email: email.trim(),
+            email: cleanEmail,
             password
           }
 
@@ -76,148 +95,210 @@ function AuthPage({
       })
 
       if (isRegister) {
-        setPopupType('success')
-        setMessage('Account created successfully. You can now log in.')
-
         setPassword('')
         setUsername('')
+
+        showMessage(
+          'success',
+          'Your account has been created. You can now log in.'
+        )
 
         onSwitchMode()
         return
       }
 
-      if (!data.access_token) {
+      if (!data?.access_token) {
         throw new Error(
-          'Login succeeded, but no access token was returned.'
+          'Authentication succeeded, but no access token was returned.'
         )
       }
 
       localStorage.setItem('token', data.access_token)
 
-      setPopupType('success')
-      setMessage('Login successful! Redirecting to dashboard...')
+      showMessage(
+        'success',
+        'Login successful. Welcome back to Aflit!'
+      )
 
       setTimeout(() => {
-        onLoginSuccess()
-      }, 1000)
+        onLoginSuccess?.()
+      }, 700)
 
     } catch (error) {
-      setPopupType('error')
-      setMessage(error.message || 'Something went wrong.')
-
       console.error('Authentication failed:', error)
+
+      showMessage(
+        'error',
+        error.message || 'Unable to authenticate. Please try again.'
+      )
 
     } finally {
       setIsLoading(false)
     }
   }
 
-  function handleForgotPassword() {
-    if (onForgotPassword) {
-      onForgotPassword()
-    } else {
-      setPopupType('error')
-      setMessage('Password recovery is not connected yet.')
-    }
-  }
+  async function handleGoogleLogin(credentialResponse) {
+    if (isLoading || isGoogleLoading) return
 
-  async function handleGoogleLogin() {
-    if (!onGoogleLogin) {
-      setPopupType('error')
-      setMessage('Google sign-in is not connected yet.')
+    setMessage('')
+
+    const idToken = credentialResponse?.credential
+
+    if (!idToken) {
+      showMessage(
+        'error',
+        'Google did not return an ID token. Please try again.'
+      )
       return
     }
 
-    try {
-      await onGoogleLogin()
-    } catch (error) {
-      setPopupType('error')
-      setMessage(error.message || 'Google sign-in failed.')
+    if (!onGoogleLogin) {
+      showMessage(
+        'error',
+        'Google sign-in is not connected yet.'
+      )
+      return
     }
+
+    setIsGoogleLoading(true)
+
+    try {
+      await onGoogleLogin(idToken)
+
+    } catch (error) {
+      console.error('Google authentication failed:', error)
+
+      showMessage(
+        'error',
+        error.message || 'Google sign-in failed.'
+      )
+
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  function handleGoogleError() {
+    showMessage(
+      'error',
+      'Google sign-in failed. Please try again.'
+    )
+  }
+
+  function handleForgotPassword() {
+    if (onForgotPassword) {
+      onForgotPassword()
+      return
+    }
+
+    showMessage(
+      'error',
+      'Password recovery is not connected yet.'
+    )
   }
 
   return (
     <div className="auth-page">
 
-      {/* BACK BUTTON */}
-
       <button
         className="auth-back-button"
-        onClick={onBack}
         type="button"
+        onClick={onBack}
       >
-        Back to Aflit
+        <FontAwesomeIcon icon={faArrowLeft} />
+        <span>Back to Aflit</span>
       </button>
-
-
-      {/* AUTHENTICATION CARD */}
 
       <div className="auth-card">
 
-        {/* LEFT PANEL */}
+        {/* LEFT BRAND PANEL */}
 
-        <div className="card-layout-left">
+        <section className="card-layout-left">
+
           <a
-            className="brand auth-brand"
             href="/"
+            className="brand auth-brand"
             onClick={(event) => {
               event.preventDefault()
-              onBack()
+              onBack?.()
             }}
           >
             Aflit<span>.</span>
           </a>
 
           <div className="auth-panel-copy">
-            <p className="auth-eyebrow">CREATOR INTELLIGENCE</p>
+
+            <p className="auth-eyebrow">
+              CREATOR INTELLIGENCE & BUSINESS OS
+            </p>
+
             <h2>
               {isRegister
-                ? 'Make every move a growth move.'
+                ? 'Turn your audience into opportunity.'
                 : 'Your creator journey, in focus.'}
             </h2>
+
             <p className="auth-panel-description">
-              Understand your audience, find new opportunities,
-              and build your creator business with confidence.
+              Understand your audience, discover growth
+              opportunities and build a stronger creator
+              business with Aflit.
             </p>
+
           </div>
 
           <div className="auth-visual" aria-hidden="true">
+
             <div className="auth-visual-ring auth-visual-ring-one" />
+
             <div className="auth-visual-ring auth-visual-ring-two" />
-            <div className="auth-visual-core">A<span>.</span></div>
+
+            <div className="auth-visual-core">
+              A<span>.</span>
+            </div>
+
             <div className="auth-visual-caption">
               <span className="auth-status-dot" />
               Growth, with clarity
             </div>
+
           </div>
-        </div>
+
+        </section>
 
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT AUTHENTICATION PANEL */}
 
-        <div className="card-layout-right">
+        <section className="card-layout-right">
 
-          <h1>
-            {isRegister
-              ? 'Create your account'
-              : 'Welcome back'}
-          </h1>
+          <div className="auth-heading">
+
+            <p className="auth-eyebrow">
+              {isRegister ? 'GET STARTED' : 'WELCOME BACK'}
+            </p>
+
+            <h1>
+              {isRegister
+                ? 'Create your account'
+                : 'Welcome back'}
+            </h1>
+
+            <p className="auth-description">
+              {isRegister
+                ? 'Create your Aflit account and start building.'
+                : 'Sign in to continue building your creator business.'}
+            </p>
+
+          </div>
 
 
-          <p className="auth-description">
-            {isRegister
-              ? 'Start understanding your creator growth.'
-              : 'Log in to continue growing your audience.'}
-          </p>
+          {/* EMAIL AND PASSWORD FORM */}
 
-
-          {/* AUTH FORM */}
-
-          <form onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit}>
 
             {isRegister && (
               <label className="auth-field">
-                Username
+
+                <span>Username</span>
 
                 <input
                   type="text"
@@ -228,13 +309,16 @@ function AuthPage({
                   placeholder="Your creator name"
                   autoComplete="username"
                   required
+                  disabled={isLoading || isGoogleLoading}
                 />
+
               </label>
             )}
 
 
             <label className="auth-field">
-              Email
+
+              <span>Email address</span>
 
               <input
                 type="email"
@@ -245,14 +329,15 @@ function AuthPage({
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
+                disabled={isLoading || isGoogleLoading}
               />
+
             </label>
 
 
-            {/* PASSWORD */}
-
             <label className="auth-field">
-              Password
+
+              <span>Password</span>
 
               <div className="password-input-container">
 
@@ -270,13 +355,14 @@ function AuthPage({
                   }
                   minLength={8}
                   required
+                  disabled={isLoading || isGoogleLoading}
                 />
 
                 <button
                   type="button"
                   className="password-toggle"
                   onClick={() =>
-                    setIsPasswordVisible(!isPasswordVisible)
+                    setIsPasswordVisible(current => !current)
                   }
                   aria-label={
                     isPasswordVisible
@@ -294,28 +380,26 @@ function AuthPage({
                 </button>
 
               </div>
+
             </label>
 
-
-            {/* FORGOT PASSWORD */}
 
             {!isRegister && (
               <button
                 id="forgot_password"
                 type="button"
                 onClick={handleForgotPassword}
+                disabled={isLoading || isGoogleLoading}
               >
                 Forgot password?
               </button>
             )}
 
 
-            {/* SUBMIT */}
-
             <button
-              className="get-started-button auth-submit"
               type="submit"
-              disabled={isLoading}
+              className="get-started-button auth-submit"
+              disabled={isLoading || isGoogleLoading}
             >
               {isLoading
                 ? 'Please wait...'
@@ -327,7 +411,7 @@ function AuthPage({
           </form>
 
 
-          {/* SWITCH AUTH MODE */}
+          {/* ACCOUNT SWITCH */}
 
           <p className="auth-switch">
 
@@ -339,10 +423,14 @@ function AuthPage({
 
             <button
               type="button"
-              onClick={onSwitchMode}
-              disabled={isLoading}
+              onClick={() => {
+                setMessage('')
+                setPassword('')
+                onSwitchMode?.()
+              }}
+              disabled={isLoading || isGoogleLoading}
             >
-              {isRegister ? 'Log in' : 'Register'}
+              {isRegister ? 'Log in' : 'Create account'}
             </button>
 
           </p>
@@ -351,29 +439,38 @@ function AuthPage({
           {/* DIVIDER */}
 
           <div className="auth-divider">
-            <span>OR</span>
+            <span>OR CONTINUE WITH</span>
           </div>
 
 
-          {/* GOOGLE SIGN IN */}
+          {/* GOOGLE SIGN-IN */}
 
-          <button
-            type="button"
-            className="google-auth-button"
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-          >
-            <FontAwesomeIcon icon={faGoogle} />
+          <div className="google-auth-button">
 
-            Continue with Google
-          </button>
+            <GoogleLogin
+              onSuccess={handleGoogleLogin}
+              onError={handleGoogleError}
+              text="continue_with"
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="320"
+            />
 
-        </div>
+          </div>
+
+
+          <p className="auth-legal">
+            By continuing, you agree to use Aflit responsibly.
+            <input type="checkbox" required />
+          </p>
+
+        </section>
 
       </div>
 
 
-      {/* POPUP */}
+      {/* FEEDBACK POPUP */}
 
       {message && (
         <Popup

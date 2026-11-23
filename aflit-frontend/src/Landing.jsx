@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import './App.css'
 import './style.css'
+import './PagePolish.css'
 
 function LandingPage({
   onGetStarted,

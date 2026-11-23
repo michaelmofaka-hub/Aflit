@@ -23,7 +23,8 @@ from Services.platform_services import (
     connect_platform,
     get_user_platforms,
     get_platform,
-    delete_platform
+    delete_platform,
+    update_youtube_connection
 )
 
 from Routes.users import get_current_user
@@ -185,12 +186,13 @@ async def connect_youtube(
 # YOUTUBE OAUTH CALLBACK
 # --------------------------------------------------
 
+
 @router.get("/youtube/callback")
 async def youtube_callback(
     code: str = Query(...),
     state: str = Query(...)
 ):
-
+    # 1. Validate OAuth state
     oauth_data = get_user_from_oauth_state(state)
 
     if oauth_data is None:
@@ -202,13 +204,17 @@ async def youtube_callback(
     user_id = oauth_data["user_id"]
     code_verifier = oauth_data["code_verifier"]
 
+    # 2. Remove used state
     delete_oauth_state(state)
 
+    # 3. Recreate the OAuth flow using the original PKCE verifier
     flow = create_google_flow(
         code_verifier=code_verifier
     )
 
+    # 4. Exchange authorization code for tokens
     try:
+        flow.oauth2session.scope = None
         flow.fetch_token(code=code)
 
     except Exception:
@@ -221,12 +227,34 @@ async def youtube_callback(
             detail="Failed to exchange authorization code"
         )
 
+    # 5. Verify Google granted YouTube read permission
+    granted_scope = flow.oauth2session.token.get(
+    "scope", []
+)
+
+    if isinstance(granted_scope, str):
+        granted_scopes = set(granted_scope.split())
+    elif isinstance(granted_scope, (list, tuple, set)):
+        granted_scopes = set(granted_scope)
+    else:
+        granted_scopes = set()
+
+    required_scope = "https://www.googleapis.com/auth/youtube.upload"
+
+    if required_scope not in granted_scopes:
+        raise HTTPException(
+            status_code=403,
+            detail="Google did not grant YouTube upload access"
+        )
+
+    # 6. Build YouTube API client
     youtube = build(
         "youtube",
         "v3",
         credentials=flow.credentials
     )
 
+    # 7. Retrieve YouTube channel
     try:
         channel_response = youtube.channels().list(
             part="snippet,contentDetails,statistics",
@@ -252,7 +280,6 @@ async def youtube_callback(
     channel = channel_response["items"][0]
 
     channel_id = channel["id"]
-
     channel_title = channel["snippet"]["title"]
 
     uploads_playlist_id = (
@@ -261,6 +288,7 @@ async def youtube_callback(
         ["uploads"]
     )
 
+    # 8. Save connected YouTube account
     platform_id = await connect_platform(
         user_id=user_id,
         platform="youtube",
@@ -273,18 +301,31 @@ async def youtube_callback(
         token_expires_at=flow.credentials.expiry
     )
 
-    logging.warning(
-        "YOUTUBE PLATFORM SAVE: user_id=%s, platform_id=%s",
+    if platform_id is None:
+        reconnected = await update_youtube_connection(
+            user_id=user_id,
+            external_account_id=channel_id,
+            account_name=channel_title,
+            uploads_playlist_id=uploads_playlist_id,
+            access_token=flow.credentials.token,
+            refresh_token=flow.credentials.refresh_token,
+            token_expires_at=flow.credentials.expiry
+        )
+
+        if not reconnected:
+            raise HTTPException(
+                status_code=409,
+                detail="YouTube is already connected to another account."
+            )
+        platform_id = reconnected
+
+    logging.info(
+        "YouTube connected successfully: user_id=%s, platform_id=%s",
         user_id,
         platform_id
     )
 
-    if platform_id is None:
-        raise HTTPException(
-            status_code=409,
-            detail="YouTube is already connected"
-        )
-
+    # 9. Redirect user to frontend
     environment = os.getenv(
         "ENVIRONMENT",
         "development"

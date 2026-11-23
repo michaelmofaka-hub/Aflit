@@ -20,3 +20,6 @@ class TokenResponse(BaseModel):
 
 class UserUpdate(BaseModel):
     username: str | None = None
+
+class GoogleLogin(BaseModel):
+    id_token: str

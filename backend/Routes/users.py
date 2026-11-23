@@ -1,4 +1,4 @@
-
+import secrets
 from fastapi import (
     APIRouter,
     Depends,
@@ -23,7 +23,8 @@ from Services.users import (
     verify_refresh_token,
     save_refresh_token,
     is_refresh_token_active,
-    revoke_refresh_token
+    revoke_refresh_token,
+    verify_google_token
 )
 
 from Schema.users import (
@@ -31,7 +32,8 @@ from Schema.users import (
     UserLogin,
     UserResponse,
     TokenResponse,
-    UserUpdate
+    UserUpdate,
+    GoogleLogin
 )
 
 from Config.settings import settings
@@ -251,6 +253,82 @@ async def login(
         "access_token": access_token
     }
 
+# --------------------------------------------------
+# GOOGLE LOGIN
+# --------------------------------------------------
+
+@router.post("/google", response_model=TokenResponse)
+async def google_login(
+    google_data: GoogleLogin,
+    response: Response
+):
+    # Verify Google's ID token.
+    google_user = verify_google_token(google_data.id_token)
+
+    if google_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Google authentication"
+        )
+
+    email = google_user["email"]
+    username = google_user["username"]
+
+    # Check whether this email already has an Aflit account.
+    user_record = await get_user_by_email(email)
+
+    # Create an Aflit account if one does not exist.
+    if user_record is None:
+        random_password = secrets.token_urlsafe(32)
+
+        new_user = create_user(
+            username,
+            email,
+            random_password
+        )
+
+        try:
+            await save_user(new_user)
+
+        except DuplicateKeyError:
+            # Another request may have created the account
+            # at the same time.
+            user_record = await get_user_by_email(email)
+
+            if user_record is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Could not create Google account"
+                )
+
+        else:
+            user_record = await get_user_by_email(email)
+
+    if user_record is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not retrieve Aflit account"
+        )
+
+    # Issue Aflit's own authentication tokens.
+    user_id = str(user_record["_id"])
+
+    access_token = create_access_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+
+    await save_refresh_token(
+        user_id,
+        refresh_token
+    )
+
+    set_refresh_cookie(
+        response,
+        refresh_token
+    )
+
+    return {
+        "access_token": access_token
+    }
 
 # --------------------------------------------------
 # REFRESH SESSION

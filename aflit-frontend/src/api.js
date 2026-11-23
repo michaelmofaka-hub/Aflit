@@ -75,12 +75,13 @@ async function sendRequest(
     );
 
     if (
-      response.status === 401 &&
-      retry &&
-      endpoint !== "/users/login" &&
-      endpoint !== "/users/refresh" &&
-      endpoint !== "/users/logout"
-    ) {
+  response.status === 401 &&
+  retry &&
+  endpoint !== "/users/login" &&
+  endpoint !== "/users/google" &&
+  endpoint !== "/users/refresh" &&
+  endpoint !== "/users/logout"
+) {
       const newToken = await refreshAccessToken();
 
       headers.set(

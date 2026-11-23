@@ -1,4 +1,6 @@
 
+from google.oauth2 import id_token
+from google.auth.transport import requests
 import bcrypt
 import jwt
 import hashlib
@@ -267,3 +269,23 @@ def ensure_ownership(
         return False
 
     return True
+
+def verify_google_token(token: str):
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            token,
+            requests.Request(),
+            settings.google_client_id
+        )
+
+        if not idinfo.get("email_verified"):
+            return None
+
+        return {
+            "google_id": idinfo.get("sub"),
+            "email": idinfo.get("email"),
+            "username": idinfo.get("name") or idinfo.get("email", "").split("@")[0]
+        }
+
+    except ValueError:
+        return None

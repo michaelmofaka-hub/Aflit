@@ -14,6 +14,7 @@ from Routes.analytic_route import router as analytic_router
 from Routes.sync_job_route import router as sync_job_router
 from Routes.audience_route import router as audience_router
 from Routes.ai_agent_route import router as ai_agent_router
+from Routes.publishing_route import router as publishing_router
 
 from worker.sync_worker import sync_worker
 
@@ -104,6 +105,11 @@ app.include_router(
 
 app.include_router(
     ai_agent_router,
+)
+
+app.include_router(
+    publishing_router,
+    prefix="/posts"
 )
 
 

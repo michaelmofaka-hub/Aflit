@@ -19,7 +19,8 @@ GOOGLE_CLIENT_CONFIG = {
 
 
 SCOPES = [
-    "https://www.googleapis.com/auth/youtube.readonly"
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.upload"
 ]
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
@@ -36,12 +37,12 @@ def create_google_flow(code_verifier: str | None = None):
     flow = Flow.from_client_config(
         GOOGLE_CLIENT_CONFIG,
         scopes=SCOPES,
+        redirect_uri=REDIRECT_URI,
         code_verifier=code_verifier,
-        redirect_uri=REDIRECT_URI
+        autogenerate_code_verifier=(code_verifier is None)
     )
 
     return flow
-
 
 def create_oauth_state(state: str, user_id: str, code_verifier: str):
     

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from './api'
+import CreatePost from './CreatePost'
 import './App.css'
 
 function formatDate(value) {
@@ -25,7 +26,7 @@ function ContentPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [createMessage, setCreateMessage] = useState('')
+  const [isComposerOpen, setIsComposerOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -175,12 +176,6 @@ function ContentPage() {
     .map(point => `${point.x},${point.y}`)
     .join(' ')
 
-  function handleCreatePost() {
-    setCreateMessage(
-      'Publishing is not connected yet. This action will be enabled when Aflit’s publishing workflow is implemented.'
-    )
-  }
-
   return (
     <section className="content-page">
       <div className="content-workspace-heading">
@@ -198,23 +193,14 @@ function ContentPage() {
         <button
           type="button"
           className="content-create-button"
-          onClick={handleCreatePost}
+          onClick={() => setIsComposerOpen(true)}
         >
           + Create New Post
         </button>
       </div>
 
-      {createMessage && (
-        <div className="content-notice">
-          {createMessage}
-          <button
-            type="button"
-            onClick={() => setCreateMessage('')}
-            aria-label="Dismiss message"
-          >
-            ×
-          </button>
-        </div>
+      {isComposerOpen && (
+        <CreatePost onClose={() => setIsComposerOpen(false)} />
       )}
 
       {loading ? (

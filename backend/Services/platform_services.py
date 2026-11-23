@@ -1,6 +1,7 @@
 
 from bson import ObjectId
 from bson.errors import InvalidId
+from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from database.database import database
@@ -39,6 +40,42 @@ async def connect_platform(
         return None
 
     return str(result.inserted_id)
+
+
+async def update_youtube_connection(
+    user_id: str,
+    external_account_id: str,
+    account_name: str,
+    uploads_playlist_id: str,
+    access_token: str,
+    refresh_token: str | None,
+    token_expires_at
+):
+    collection = database["platform"]
+    credentials = {
+        "external_account_id": external_account_id,
+        "account_name": account_name,
+        "uploads_playlist_id": uploads_playlist_id,
+        "access_token": access_token,
+        "token_expires_at": token_expires_at,
+        "status": "connected"
+    }
+
+    if refresh_token:
+        credentials["refresh_token"] = refresh_token
+
+    updated = await collection.find_one_and_update(
+        {
+            "user_id": user_id,
+            "platform": "youtube"
+        },
+        {
+            "$set": credentials
+        },
+        return_document=ReturnDocument.AFTER
+    )
+
+    return str(updated["_id"]) if updated else None
 
 
 async def get_user_platforms(user_id: str):

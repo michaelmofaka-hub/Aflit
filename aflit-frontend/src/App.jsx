@@ -42,7 +42,6 @@ function App() {
   const [youtubeConnected, setYoutubeConnected] = useState(false)
 
   // Authentication is checked silently in the background.
-  // This state does not control or render a checker window.
   const [authStatus, setAuthStatus] = useState('checking')
 
 
@@ -70,8 +69,6 @@ function App() {
     async function checkAuthentication() {
       const token = localStorage.getItem('token')
 
-      // No token means the user is not authenticated.
-
       if (!token) {
         if (cancelled) return
 
@@ -87,9 +84,6 @@ function App() {
       }
 
       try {
-        // Verify the JWT using the existing FastAPI endpoint.
-        // api.js handles access-token renewal when necessary.
-
         await apiRequest('/users/me', {
           method: 'GET',
           headers: {
@@ -116,10 +110,6 @@ function App() {
           error
         )
 
-        // api.js removes the token if refresh returns 401.
-        // If the token remains, treat the failure as temporary
-        // and preserve the user's session.
-
         if (
           !localStorage.getItem('token') ||
           isUnauthorized(error)
@@ -135,9 +125,6 @@ function App() {
           )
 
         } else {
-          // No checker window and no retry window are rendered.
-          // The potentially valid token is preserved.
-
           setAuthStatus('error')
         }
       }
@@ -305,7 +292,37 @@ function App() {
   }
 
 
-  // 10. BROWSER BACK AND FORWARD
+  // 10. GOOGLE SIGN-IN
+
+  async function handleGoogleLogin(idToken) {
+    if (!idToken) {
+      throw new Error('Google did not return an ID token.')
+    }
+
+    const data = await apiRequest('/users/google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id_token: idToken
+      })
+    })
+
+    if (!data?.access_token) {
+      throw new Error(
+        'Google sign-in succeeded, but Aflit did not return an access token.'
+      )
+    }
+
+    localStorage.setItem('token', data.access_token)
+
+    setAuthStatus('authenticated')
+    setActiveSection('Dashboard')
+  }
+
+
+  // 11. BROWSER BACK AND FORWARD
 
   useEffect(() => {
     function handlePopState() {
@@ -339,7 +356,7 @@ function App() {
   }, [authStatus])
 
 
-  // 11. LOGOUT
+  // 12. LOGOUT
 
   function handleLogout() {
     localStorage.removeItem('token')
@@ -353,7 +370,7 @@ function App() {
   }
 
 
-  // 12. ANALYTICS PROPS
+  // 13. ANALYTICS PROPS
 
   const analyticsProps = {
     dailyHistory,
@@ -363,7 +380,7 @@ function App() {
   }
 
 
-  // 13. RENDER APPLICATION SECTIONS
+  // 14. RENDER APPLICATION SECTIONS
 
   function renderSection() {
     switch (activeSection) {
@@ -401,6 +418,7 @@ function App() {
         return (
           <AuthPage
             mode={authMode}
+            onGoogleLogin={handleGoogleLogin}
 
             onSwitchMode={() => {
               setAuthMode(currentMode =>
@@ -495,9 +513,9 @@ function App() {
   }
 
 
-  // 14. APPLICATION LAYOUT
-  // There are deliberately no authentication checker,
-  // loading, backend-error, or retry windows in this component.
+  // 15. APPLICATION LAYOUT
+
+  // No authentication checker or retry windows are rendered.
 
   return (
     <div className="app-layout">

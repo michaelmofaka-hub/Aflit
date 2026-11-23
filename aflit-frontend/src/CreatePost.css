@@ -1,0 +1,258 @@
+.create-post-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgb(5 10 20 / 78%);
+}
+
+.create-post-dialog {
+  width: min(100%, 680px);
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  padding: 26px;
+  border: 1px solid #2a3448;
+  border-radius: 16px;
+  background: #111a2b;
+  color: #e5eaf3;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+}
+
+.create-post-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.create-post-header h2 {
+  margin: 8px 0;
+  color: #fff;
+  font-size: 25px;
+}
+
+.create-post-header p,
+.create-post-field small,
+.create-post-reconnect {
+  color: #94a3b8;
+}
+
+.create-post-header p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.create-post-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #344057;
+  border-radius: 9px;
+  background: transparent;
+  color: #e5eaf3;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.create-post-form {
+  display: grid;
+  gap: 16px;
+}
+
+.create-post-field {
+  display: grid;
+  gap: 8px;
+  color: #e5eaf3;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.create-post-field input,
+.create-post-field select,
+.create-post-field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid #344057;
+  border-radius: 9px;
+  background: #0e1625;
+  color: #f8fafc;
+  font: inherit;
+}
+
+.create-post-field textarea {
+  resize: vertical;
+}
+
+.create-post-field input:focus,
+.create-post-field select:focus,
+.create-post-field textarea:focus {
+  outline: 2px solid #5eead4;
+  outline-offset: 1px;
+}
+
+.create-post-field input[type='file'] {
+  padding: 8px;
+}
+
+.create-post-field small {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.create-post-platform-note {
+  padding: 12px;
+  border: 1px solid #344057;
+  border-radius: 9px;
+  background: #18243a;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.create-post-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.create-post-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.create-post-primary,
+.create-post-secondary {
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.create-post-primary {
+  border: 0;
+  background: #f2a93b;
+  color: #101827;
+}
+
+.create-post-secondary {
+  border: 1px solid #344057;
+  background: transparent;
+  color: #e5eaf3;
+}
+
+.create-post-primary:disabled,
+.create-post-secondary:disabled,
+.create-post-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.create-post-reconnect {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.create-post-reconnect button {
+  margin-left: 6px;
+  border: 0;
+  background: transparent;
+  color: #5eead4;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.create-post-success {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  padding: 10px 0 2px;
+}
+
+.create-post-success > strong {
+  color: #fff;
+  font-size: 18px;
+}
+
+.create-post-success p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.create-post-success a {
+  color: #5eead4;
+}
+
+.create-post-drafts {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.create-post-drafts h3 {
+  margin: 0;
+  color: #e5eaf3;
+  font-size: 14px;
+}
+
+.create-post-draft-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #344057;
+  border-radius: 9px;
+  background: #0e1625;
+}
+
+.create-post-draft-row > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.create-post-draft-row strong {
+  overflow: hidden;
+  color: #e5eaf3;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.create-post-draft-row small {
+  color: #94a3b8;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.create-post-draft-row button {
+  border: 0;
+  background: transparent;
+  color: #fca5a5;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .create-post-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .create-post-dialog {
+    width: 100%;
+    max-height: 95vh;
+    padding: 20px;
+    border-radius: 16px 16px 0 0;
+  }
+}

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Aflit</title>
+  <defs>
+    <linearGradient id="warm" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+    <linearGradient id="cool" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0E1420"/>
+  <path d="M10 48 26 15q2-4 6 0l8 16-8 5-6-12-10 24z" fill="url(#warm)"/>
+  <path d="M34 37 46 25l-1-7 12 2-2 12-3-5-13 14z" fill="url(#warm)"/>
+  <path d="M37 42 45 35l9 13H39z" fill="url(#cool)"/>
+  <rect x="18" y="42" width="5" height="8" rx="1" fill="#22D3EE"/>
+  <rect x="25" y="38" width="5" height="12" rx="1" fill="#22D3EE"/>
+</svg>
